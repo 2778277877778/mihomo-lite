@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from ctypes import wintypes
 
@@ -272,9 +273,13 @@ class MainWindow(QMainWindow):
             toggle.set_theme(theme)
         self._shell.update()
         glass.set_window_attributes(self, dark=theme == "dark")
-        glass.enable_acrylic(
+        blurred = glass.enable_acrylic(
             self, tint=0x99160E0A if theme == "dark" else 0x99F4F6FA
         )
+        # Off-screen renders and systems with transparency switched off keep a
+        # readable, nearly opaque base instead of an unblurred desktop.
+        self._backdrop.flat = not blurred and os.environ.get("MIHOMO_LITE_TRANSLUCENT") != "1"
+        self._shell.update()
 
     def show_and_raise(self) -> None:
         self.showNormal()

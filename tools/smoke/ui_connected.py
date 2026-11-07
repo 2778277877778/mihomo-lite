@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ.setdefault("MIHOMO_LITE_TRANSLUCENT", "1")
 os.environ.setdefault("QT_QPA_FONTDIR", "C:/Windows/Fonts")
 HOME = Path(tempfile.mkdtemp(prefix="mihomo-shot-"))
 os.environ["MIHOMO_LITE_HOME"] = str(HOME)

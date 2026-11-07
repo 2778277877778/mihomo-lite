@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ.setdefault("MIHOMO_LITE_TRANSLUCENT", "1")
 os.environ.setdefault("MIHOMO_LITE_HOME", tempfile.mkdtemp(prefix="mihomo-lite-ui-"))
 
 ROOT = Path(__file__).resolve().parents[2]

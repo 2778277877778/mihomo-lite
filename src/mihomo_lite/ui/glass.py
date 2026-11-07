@@ -114,6 +114,9 @@ class AuroraBackdrop:
     def __init__(self, theme: str = "dark", radius: float = 20.0) -> None:
         self.theme = theme
         self.radius = radius
+        #: When the OS refuses to blur the backdrop we paint an almost opaque
+        #: base instead, otherwise the desktop would show through unblurred.
+        self.flat = False
 
     def set_theme(self, theme: str) -> None:
         self.theme = theme
@@ -142,13 +145,13 @@ class AuroraBackdrop:
 
         if self.theme == "dark":
             base = QLinearGradient(rect.topLeft(), rect.bottomRight())
-            base.setColorAt(0.0, QColor(14, 18, 30, 168))
-            base.setColorAt(0.55, QColor(10, 13, 22, 190))
-            base.setColorAt(1.0, QColor(9, 11, 19, 205))
+            base.setColorAt(0.0, QColor(14, 18, 30, 250 if self.flat else 168))
+            base.setColorAt(0.55, QColor(10, 13, 22, 252 if self.flat else 190))
+            base.setColorAt(1.0, QColor(9, 11, 19, 253 if self.flat else 205))
         else:
             base = QLinearGradient(rect.topLeft(), rect.bottomRight())
-            base.setColorAt(0.0, QColor(248, 250, 255, 185))
-            base.setColorAt(1.0, QColor(233, 238, 249, 215))
+            base.setColorAt(0.0, QColor(248, 250, 255, 252 if self.flat else 185))
+            base.setColorAt(1.0, QColor(233, 238, 249, 254 if self.flat else 215))
         painter.fillRect(rect, base)
 
         for cx, cy, spread, color in self._blobs():
