@@ -1,4 +1,4 @@
-"""End-to-end: real core, fake system proxy backend, temp data directory.
+r"""End-to-end: real core, fake system proxy backend, temp data directory.
 
 Run from the repository root:  .venv\Scripts\python tools\smoke\e2e_connect.py
 """
