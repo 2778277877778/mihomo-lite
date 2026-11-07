@@ -99,8 +99,8 @@ class SettingsPage(QWidget):
     def _build_core_card(self) -> QWidget:
         card, layout = self._section(
             "Mihomo core",
-            "Mihomo Lite does not bundle the core. Point it at an existing mihomo.exe, "
-            "or download the official Windows build once.",
+            "A verified Mihomo core ships with the app. You can point it at another "
+            "mihomo.exe, or download a newer official Windows build.",
         )
         row = QHBoxLayout()
         self._core_path = QLineEdit()
@@ -116,8 +116,11 @@ class SettingsPage(QWidget):
         self._download_button.clicked.connect(self._download_core)
         self._verify_button = QPushButton("Verify core")
         self._verify_button.clicked.connect(self._verify_core)
+        self._remove_button = QPushButton("Remove downloaded core")
+        self._remove_button.clicked.connect(self._remove_downloaded_core)
         buttons.addWidget(self._download_button)
         buttons.addWidget(self._verify_button)
+        buttons.addWidget(self._remove_button)
         buttons.addStretch(1)
         layout.addLayout(buttons)
 
@@ -209,12 +212,19 @@ class SettingsPage(QWidget):
         self._update_core_hint()
 
     def _update_core_hint(self) -> None:
+        downloaded = self._services.core.downloaded_path().exists()
+        self._remove_button.setEnabled(downloaded)
         try:
             info = self._services.core.ensure()
         except Exception as exc:  # noqa: BLE001 - hint only
             self._core_hint.setText(f"Core: not ready - {exc}")
         else:
-            self._core_hint.setText(f"Core: {info.version} at {info.path}")
+            self._core_hint.setText(f"Core: {info.version} ({info.source}) at {info.path}")
+
+    def _remove_downloaded_core(self) -> None:
+        self._services.core.remove_installed()
+        self._update_core_hint()
+        self._status.setText("Removed the downloaded core; the bundled one is used again.")
 
     def _save(self) -> None:
         autostart_ok = True
@@ -286,6 +296,7 @@ class SettingsPage(QWidget):
             self._core_hint.setText(
                 f"Core {getattr(info, 'version', '')} installed at {getattr(info, 'path', '')}"
             )
+            self._remove_button.setEnabled(True)
 
         def _failed(message: str) -> None:
             self._download_button.setEnabled(True)

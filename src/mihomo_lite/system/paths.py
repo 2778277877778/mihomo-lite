@@ -89,17 +89,6 @@ class AppPaths:
         for directory in (self.root, self.profiles, self.runtime, self.logs, self.core):
             directory.mkdir(parents=True, exist_ok=True)
 
-    def core_candidates(self) -> list[Path]:
-        """Where a Mihomo binary may live, most preferred first."""
-        candidates = [self.core / "mihomo.exe"]
-        if is_frozen():
-            candidates.append(executable_dir() / "mihomo.exe")
-            candidates.append(executable_dir() / "runtime" / "mihomo.exe")
-        else:
-            candidates.append(executable_dir().parent / "runtime" / "mihomo.exe")
-            candidates.append(executable_dir().parent.parent / "runtime" / "mihomo.exe")
-        return candidates
-
 
 def app_paths() -> AppPaths:
     paths = AppPaths(root=data_dir())

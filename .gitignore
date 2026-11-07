@@ -17,6 +17,7 @@ htmlcov/
 # App runtime data (never commit)
 runtime/*.yaml
 runtime/*.log
+runtime/*.exe
 profiles/
 *.journal.json
 

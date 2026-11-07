@@ -14,13 +14,14 @@ put everything back when you quit.
 
 - **Simple** - connect, pick a node, disconnect. Nothing else in the way.
 - **Lightweight** - PySide6 Essentials only (no WebEngine/QML), no background service,
-  no TUN driver, no bundled core.
+  no TUN driver. The ~58 MB core is bundled, so there is nothing to download on first run.
 - **Reliable** - the previous system proxy settings are saved before they are touched and
   restored on disconnect, on crash, and on the next start after a crash.
 - **Open** - MIT licensed application code, small enough to read in an afternoon.
 
 ## Features (v0.1)
 
+- Ships with a verified Mihomo core (unmodified, GPL-3.0) - works offline after install
 - Local YAML profile import and subscription import/update with backup + validation
 - Start/stop the Mihomo core with QProcess and surface its output in the UI
 - Windows system proxy handling (WinINET per-connection API + registry mirror)
@@ -36,12 +37,11 @@ Not in v0.1: TUN mode, rule editing, connection list, multi-core support.
 
 1. Download the latest installer from the Releases page (or build it yourself, below).
 2. On first run, import a YAML profile (file or subscription).
-3. Open **Settings -> Mihomo core** and either point at an existing mihomo.exe
-   or press **Download core** (about 22 MB, downloaded from the official GitHub release).
-4. Press **Connect**.
+3. Press **Connect**.
 
-The application does **not** ship the core binary. Mihomo is a separate project with its
-own license; the download is explicit and user-triggered.
+The installer includes a Mihomo core, so no download is needed. **Settings -> Mihomo core**
+shows which binary is in use and lets you download a newer official build or point at your
+own mihomo.exe.
 
 ## Requirements
 
@@ -101,7 +101,8 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 ## License
 
 Application code: MIT (see [LICENSE](LICENSE)).
-Mihomo core: GPL-3.0, downloaded separately, not bundled.
+Mihomo core: GPL-3.0, bundled unmodified; source and notices in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and licenses/.
 PySide6 / Qt: LGPL-3.0, dynamically linked.
 
 ## Contributing

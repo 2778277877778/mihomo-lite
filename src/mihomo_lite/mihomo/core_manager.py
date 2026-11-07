@@ -20,7 +20,7 @@ import httpx
 
 from mihomo_lite.config.defaults import CORE_ASSET_NAME, CORE_DOWNLOAD_URL
 from mihomo_lite.mihomo.health import check_core_binary
-from mihomo_lite.system.paths import AppPaths
+from mihomo_lite.system.paths import PACKAGE_ROOT, AppPaths, executable_dir, is_frozen
 from mihomo_lite.utils.exceptions import CoreDownloadError, CoreNotFoundError
 
 log = logging.getLogger(__name__)
@@ -39,14 +39,32 @@ class CoreManager:
     def __init__(self, paths: AppPaths, settings_core_path: Callable[[], str]) -> None:
         self._paths = paths
         self._settings_core_path = settings_core_path
+        # Running '<core> -v' takes a moment (and antivirus may scan the binary),
+        # so remember the last verified file for the lifetime of the process.
+        self._verified: tuple[str, float, str] | None = None
 
     def candidates(self) -> list[tuple[Path, str]]:
+        """Where a core may live, most preferred first.
+
+        A path chosen in Settings always wins, then a core the user downloaded
+        (so updates do not require reinstalling), then the bundled one.
+        """
         candidates: list[tuple[Path, str]] = []
         configured = self._settings_core_path().strip()
         if configured:
             candidates.append((Path(configured), "settings"))
-        for path in self._paths.core_candidates():
-            candidates.append((path, "portable" if path.parent != self._paths.core else "app data"))
+
+        candidates.append((self._paths.core / "mihomo.exe", "downloaded"))
+
+        if is_frozen():
+            candidates.append((executable_dir() / "runtime" / "mihomo.exe", "bundled"))
+            candidates.append((executable_dir() / "mihomo.exe", "bundled"))
+        else:
+            repo_root = PACKAGE_ROOT.parents[1]
+            candidates.append((repo_root / "runtime" / "mihomo.exe", "portable"))
+            candidates.append(
+                (repo_root / "tools" / "core" / "extracted" / "mihomo-windows-amd64.exe", "dev")
+            )
         return candidates
 
     def locate(self) -> Path | None:
@@ -55,16 +73,48 @@ class CoreManager:
                 return path
         return None
 
+    def locate_info(self) -> tuple[Path, str] | None:
+        for path, source in self.candidates():
+            if path.is_file():
+                return path, source
+        return None
+
+    def bundled_path(self) -> Path | None:
+        for path, source in self.candidates():
+            if source == "bundled" and path.is_file():
+                return path
+        return None
+
+    def downloaded_path(self) -> Path:
+        return self._paths.core / "mihomo.exe"
+
     def ensure(self, *, progress: ProgressCallback | None = None) -> CoreInfo:
-        path = self.locate()
-        if path is None:
+        found = self.locate_info()
+        if found is None:
             raise CoreNotFoundError(
-                "No Mihomo core was found. Download it first, or point Settings at an existing mihomo.exe."
+                "No Mihomo core is available. Reinstall the app, download a core, "
+                "or point Settings at an existing mihomo.exe."
             )
+        path, source = found
+        version = self._verify(path)
+        return CoreInfo(path=path, version=version, source=source)
+
+    def _verify(self, path: Path) -> str:
+        try:
+            mtime = path.stat().st_mtime
+        except OSError as exc:
+            raise CoreNotFoundError(f"cannot read the core at {path}: {exc}") from exc
+
+        if self._verified is not None:
+            cached_path, cached_mtime, cached_version = self._verified
+            if cached_path == str(path) and cached_mtime == mtime:
+                return cached_version
+
         ok, info = check_core_binary(path)
         if not ok:
             raise CoreNotFoundError(f"the core at {path} is not usable: {info}")
-        return CoreInfo(path=path, version=info, source="local")
+        self._verified = (str(path), mtime, info)
+        return info
 
     def install_from_file(self, source: Path) -> CoreInfo:
         source = Path(source)
@@ -130,7 +180,7 @@ class CoreManager:
                         progress(done, total)
 
     def remove_installed(self) -> None:
-        target = self._paths.core / "mihomo.exe"
+        target = self.downloaded_path()
         try:
             os.remove(target)
         except FileNotFoundError:

@@ -101,6 +101,14 @@ class MihomoLiteApp:
             for index in range(5):
                 self.window.show_page(index)
                 self.qt.processEvents()
+            try:
+                info = self.core.ensure()
+            except Exception as exc:  # noqa: BLE001 - selftest only reports
+                log.warning("selftest: no usable core: %s", exc)
+            else:
+                log.info(
+                    "selftest: core %s (%s) at %s", info.version, info.source, info.path
+                )
             print("selftest ok")
             return 0
 

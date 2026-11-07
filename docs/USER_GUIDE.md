@@ -5,15 +5,19 @@
 Run the installer, then launch **Mihomo Lite** from the Start Menu. The app starts without a
 core: it does not ship one.
 
-## 2. Get a core
+## 2. The core is included
 
-Open **Settings -> Mihomo core**:
+The installer ships a Mihomo core, so there is nothing to download before the first run.
+**Settings -> Mihomo core** shows the version and where the binary came from
+(bundled, downloaded, or a custom path).
 
-- Press **Download core** to fetch the official Windows build (about 22 MB). This is a
-  one-time download, stored in %LOCALAPPDATA%\MihomoLite\core.
-- Or press **Browse...** and choose an existing mihomo.exe.
+Optional actions:
 
-Press **Verify core** if you want confirmation that the binary runs.
+- **Download core** fetches a newer official Windows build into
+  %LOCALAPPDATA%\MihomoLite\core and uses it from then on.
+- **Remove downloaded core** goes back to the bundled binary.
+- **Browse...** points the app at your own mihomo.exe.
+- **Verify core** runs the binary once to confirm it works.
 
 ## 3. Import a profile
 

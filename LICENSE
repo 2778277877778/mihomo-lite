@@ -24,7 +24,11 @@ SOFTWARE.
 
 Third-party notice
 
-This project does not bundle the Mihomo core binary. At the user's explicit
-request it is downloaded at runtime from the upstream GitHub release page and
-remains subject to its own license (GPL-3.0 at the time of writing).
-PySide6 / Qt is used under LGPL-3.0 and is dynamically linked.
+This package redistributes an unmodified build of the Mihomo core, which is
+licensed under the GNU General Public License v3.0 (see
+licenses/mihomo-GPL-3.0.txt and THIRD_PARTY_NOTICES.md). The corresponding
+source for the bundled version is the upstream repository, tag v1.19.33:
+https://github.com/MetaCubeX/mihomo/tree/v1.19.33
+
+The application code itself remains MIT licensed. PySide6 / Qt is used under
+LGPL-3.0 and is dynamically linked.

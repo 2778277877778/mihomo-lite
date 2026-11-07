@@ -57,8 +57,13 @@ the Mihomo releases page and extract it there (tools/core is git-ignored).
 ## Packaging
 
 ~~~powershell
-python scripts/build_windows.py                # dist/MihomoLite (onedir)
+python scripts/build_windows.py                # dist/MihomoLite (onedir, core bundled)
 python scripts/build_windows.py --installer    # + installer via Inno Setup
+python scripts/build_windows.py --no-core      # skip the core (network-free build)
+
+The build needs the core once: it uses tools/core/ if present, otherwise downloads the
+pinned release (v1.19.33, ~22 MB). The binary is copied to dist/MihomoLite/runtime/mihomo.exe
+and is never committed to git. Licenses and THIRD_PARTY_NOTICES.md are copied alongside.
 ~~~
 
 Use onedir, not onefile: onefile unpacks Qt to a temp folder on every launch, which is slow

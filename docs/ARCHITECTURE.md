@@ -116,7 +116,9 @@ and the failure modes obvious.
 - Imported YAML cannot change the controller, bind address or open LAN access.
 - The app never runs the core with elevated privileges; TUN is out of scope precisely
   because it would require them.
-- The core binary is downloaded only on explicit user action, from the pinned GitHub release.
+- The core binary is bundled unmodified at build time (pinned upstream release, GPL-3.0).
+  A newer core can still be downloaded on explicit user action; the downloaded copy wins
+  over the bundled one and can be removed again from Settings.
 
 ## Extending
 
