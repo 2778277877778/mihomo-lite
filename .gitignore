@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# App runtime data (never commit)
+runtime/*.yaml
+runtime/*.log
+profiles/
+*.journal.json
+
+# Build outputs
+build/
+dist/
+.build-venv/
+tools/core/
+tools/venv-essentials/
+tools/smoke/*.log
+tools/smoke/*.png
+tools/smoke/manual/
+packaging/output/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

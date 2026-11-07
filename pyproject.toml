@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mihomo-lite"
+version = "0.1.0"
+description = "A simple, lightweight and reliable Windows GUI client for the Mihomo proxy core."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Mihomo Lite contributors" }]
+keywords = ["mihomo", "clash", "proxy", "windows", "pyside6"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet :: Proxy Servers",
+]
+dependencies = [
+  "PySide6-Essentials>=6.6,<7",
+  "httpx>=0.27,<1",
+  "websockets>=12,<16",
+  "PyYAML>=6.0,<7",
+  "pydantic>=2.7,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-qt>=4.4",
+  "ruff>=0.6",
+  "pyinstaller>=6.6",
+]
+
+[project.scripts]
+mihomo-lite = "mihomo_lite.main:main"
+
+[project.gui-scripts]
+mihomo-lite-gui = "mihomo_lite.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mihomo_lite"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+qt_api = "pyside6"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "B008", "SIM105"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]

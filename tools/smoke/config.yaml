@@ -1,0 +1,14 @@
+mixed-port: 17890
+allow-lan: false
+bind-address: 127.0.0.1
+mode: rule
+log-level: info
+ipv6: false
+external-controller: 127.0.0.1:19090
+secret: "smoke-test-token"
+profile:
+  store-selected: true
+proxies: []
+proxy-groups: []
+rules:
+  - MATCH,DIRECT
