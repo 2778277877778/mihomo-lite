@@ -107,8 +107,18 @@ class ProxyPage(QWidget):
             self._group_list.addItem(item)
         self._group_list.blockSignals(False)
         if self._groups:
-            self._group_list.setCurrentRow(0)
+            self._group_list.setCurrentRow(self._preferred_group_row())
         self._status.setText(f"{len(self._groups)} groups, {len(self._nodes)} nodes loaded.")
+
+    def _preferred_group_row(self) -> int:
+        """GLOBAL is rarely what a user wants; prefer the first real selector."""
+        for index, group in enumerate(self._groups):
+            if group.name != "GLOBAL" and group.is_selector:
+                return index
+        for index, group in enumerate(self._groups):
+            if group.name != "GLOBAL":
+                return index
+        return 0
 
     def _current_group(self) -> ProxyGroup | None:
         item = self._group_list.currentItem()
