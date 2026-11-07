@@ -50,8 +50,8 @@ class SettingsPage(QWidget):
         body = QWidget()
         scroll.setWidget(body)
         root = QVBoxLayout(body)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(14)
+        root.setContentsMargins(24, 18, 32, 18)
+        root.setSpacing(16)
 
         title = QLabel("Settings")
         title.setObjectName("PageTitle")

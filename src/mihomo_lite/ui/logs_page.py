@@ -16,18 +16,19 @@ class LogsPage(QWidget):
         self._services = services
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(12)
+        root.setContentsMargins(24, 18, 24, 18)
+        root.setSpacing(16)
 
         header = QHBoxLayout()
         titles = QVBoxLayout()
         title = QLabel("Logs")
         title.setObjectName("PageTitle")
-        subtitle = QLabel("Application and core output. API secrets are redacted automatically.")
+        subtitle = QLabel("App and core output; secrets are redacted.")
         subtitle.setObjectName("PageSubtitle")
+        subtitle.setWordWrap(True)
         titles.addWidget(title)
         titles.addWidget(subtitle)
-        header.addLayout(titles)
+        header.addLayout(titles, 1)
         header.addStretch(1)
 
         clear = QPushButton("Clear view")

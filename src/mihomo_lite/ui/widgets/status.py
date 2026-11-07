@@ -27,8 +27,8 @@ class MetricTile(QFrame):
         super().__init__(parent)
         self.setObjectName("Card")
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(4)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(2)
 
         self._label = QLabel(title.upper())
         self._label.setObjectName("MetricLabel")
@@ -45,8 +45,9 @@ class MetricTile(QFrame):
 class KeyValueRow(QWidget):
     def __init__(self, key: str, value: str = "-", parent=None) -> None:
         super().__init__(parent)
+        self.setMinimumHeight(23)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 2, 0, 2)
+        layout.setContentsMargins(0, 1, 0, 1)
         self._key = QLabel(key)
         self._key.setObjectName("Hint")
         self._value = QLabel(value)

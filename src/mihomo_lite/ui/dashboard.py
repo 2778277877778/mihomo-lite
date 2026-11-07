@@ -49,18 +49,19 @@ class DashboardPage(QWidget):
     # -- construction ------------------------------------------------------
     def _build(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(16)
+        root.setContentsMargins(24, 18, 24, 18)
+        root.setSpacing(12)
 
         header = QHBoxLayout()
         titles = QVBoxLayout()
         title = QLabel("Dashboard")
         title.setObjectName("PageTitle")
-        subtitle = QLabel("Start, stop and watch the proxy with a single switch.")
+        subtitle = QLabel("Start, stop and watch your traffic.")
         subtitle.setObjectName("PageSubtitle")
+        subtitle.setWordWrap(True)
         titles.addWidget(title)
         titles.addWidget(subtitle)
-        header.addLayout(titles)
+        header.addLayout(titles, 1)
         header.addStretch(1)
         self._pill = StatusPill()
         header.addWidget(self._pill, 0)
@@ -73,9 +74,9 @@ class DashboardPage(QWidget):
 
     def _build_connection_card(self) -> QWidget:
         card = QFrame()
-        card.setObjectName("Card")
+        card.setObjectName("HeroCard")
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setContentsMargins(22, 20, 22, 20)
         layout.setSpacing(18)
 
         self._switch = ToggleSwitch(width=64, height=34)
@@ -119,22 +120,13 @@ class DashboardPage(QWidget):
         card = QFrame()
         card.setObjectName("Card")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(6)
+        layout.setContentsMargins(20, 12, 20, 12)
+        layout.setSpacing(1)
         self._profile_row = KeyValueRow("Profile")
         self._core_row = KeyValueRow("Mihomo core")
-        self._proxy_row = KeyValueRow("Proxy address")
-        self._api_row = KeyValueRow("API endpoint")
+        self._proxy_row = KeyValueRow("Local endpoints")
         self._system_row = KeyValueRow("System proxy")
-        self._uptime_row = KeyValueRow("Uptime")
-        for row in (
-            self._profile_row,
-            self._core_row,
-            self._proxy_row,
-            self._api_row,
-            self._system_row,
-            self._uptime_row,
-        ):
+        for row in (self._profile_row, self._core_row, self._proxy_row, self._system_row):
             layout.addWidget(row)
         return card
 
@@ -142,7 +134,7 @@ class DashboardPage(QWidget):
         card = QFrame()
         card.setObjectName("Card")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setContentsMargins(16, 10, 16, 10)
         header = QHBoxLayout()
         title = QLabel("Core output")
         title.setObjectName("MetricLabel")
@@ -150,7 +142,7 @@ class DashboardPage(QWidget):
         header.addStretch(1)
         layout.addLayout(header)
         self._log = LogView(self)
-        self._log.setMinimumHeight(120)
+        self._log.setMinimumHeight(70)
         layout.addWidget(self._log)
         return card
 
@@ -200,23 +192,22 @@ class DashboardPage(QWidget):
     def _refresh_session(self) -> None:
         session = self._services.connection.session
         profile = self._services.profiles.active_profile()
+        uptime = self._uptime_text()
         if session is not None:
             self._profile_row.set_value(session.profile_name)
             self._core_row.set_value(session.core_version or "running")
-            self._proxy_row.set_value(f"127.0.0.1:{session.mixed_port}")
-            self._api_row.set_value(f"127.0.0.1:{session.api_port}")
-            self._system_row.set_value(
-                "enabled" if self._services.settings.current.system_proxy else "disabled"
+            self._proxy_row.set_value(
+                f"127.0.0.1:{session.mixed_port}  ·  API {session.api_port}"
             )
+            state = "enabled" if self._services.settings.current.system_proxy else "disabled"
+            self._system_row.set_value(f"{state}  ·  up {uptime}")
         else:
             self._profile_row.set_value(profile.name if profile else "none selected")
             self._core_row.set_value("not running")
             self._proxy_row.set_value("-")
-            self._api_row.set_value("-")
             self._system_row.set_value(
                 "will be enabled" if self._services.settings.current.system_proxy else "disabled"
             )
-            self._uptime_row.set_value("-")
 
     def _on_traffic(self, sample: TrafficSample) -> None:
         self._last_sample = sample
@@ -225,15 +216,15 @@ class DashboardPage(QWidget):
         self._total_down.set_value(human_bytes(sample.down_total))
         self._total_up.set_value(human_bytes(sample.up_total))
 
-    def _refresh_uptime(self) -> None:
+    def _uptime_text(self) -> str:
         session = self._services.connection.session
         if session is None:
-            self._uptime_row.set_value("-")
-            return
+            return "-"
         seconds = max(0, int(time.time() - session.started_at))
         hours, remainder = divmod(seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        if hours:
-            self._uptime_row.set_value(f"{hours}h {minutes:02d}m")
-        else:
-            self._uptime_row.set_value(f"{minutes}m {seconds:02d}s")
+        return f"{hours}h {minutes:02d}m" if hours else f"{minutes}m {seconds:02d}s"
+
+    def _refresh_uptime(self) -> None:
+        if self._services.connection.session is not None:
+            self._refresh_session()

@@ -34,18 +34,19 @@ class ProxyPage(QWidget):
 
     def _build(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(14)
+        root.setContentsMargins(24, 18, 24, 18)
+        root.setSpacing(16)
 
         header = QHBoxLayout()
         titles = QVBoxLayout()
         title = QLabel("Proxies")
         title.setObjectName("PageTitle")
-        subtitle = QLabel("Pick a policy group, then choose the node you want.")
+        subtitle = QLabel("Pick a group, then a node.")
         subtitle.setObjectName("PageSubtitle")
+        subtitle.setWordWrap(True)
         titles.addWidget(title)
         titles.addWidget(subtitle)
-        header.addLayout(titles)
+        header.addLayout(titles, 1)
         header.addStretch(1)
 
         self._refresh_button = QPushButton("Refresh")

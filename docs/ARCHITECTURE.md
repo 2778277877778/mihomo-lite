@@ -12,6 +12,11 @@
 | Layer | Package | Responsibility |
 | --- | --- | --- |
 | Presentation | mihomo_lite.ui | Widgets, pages, tray, theme. Observes state, calls core services. |
+
+The window is frameless and painted by ui/glass.py: a rounded shell clips an aurora
+backdrop, and the top-level window asks Windows for an acrylic blur so translucent surfaces
+read as frosted glass over the desktop. Window dragging and edge resizing are handled
+through WM_NCHITTEST, so native snap layouts keep working.
 | Application | mihomo_lite.core | ConnectionManager, ProfileManager, ProxyManager, TrafficMonitor, SettingsStore. |
 | Infrastructure | mihomo_lite.mihomo, mihomo_lite.system, mihomo_lite.config | QProcess wrapper, REST client, WebSocket, Windows proxy, YAML load/validate/generate. |
 | Models | mihomo_lite.models | Pydantic settings, profile metadata, proxy groups, connection state enum. |

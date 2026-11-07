@@ -29,7 +29,7 @@ put everything back when you quit.
 - Proxy groups and node switching, latency tests
 - Live upload/download speed from the Mihomo WebSocket
 - Tray icon, start-with-Windows, single-instance guard
-- Dark and light themes
+- Frameless rounded window with frosted-glass surfaces (Windows acrylic blur) in dark and light
 
 Not in v0.1: TUN mode, rule editing, connection list, multi-core support.
 

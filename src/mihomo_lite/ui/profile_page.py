@@ -36,18 +36,19 @@ class ProfilePage(QWidget):
 
     def _build(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(14)
+        root.setContentsMargins(24, 18, 24, 18)
+        root.setSpacing(16)
 
         header = QHBoxLayout()
         titles = QVBoxLayout()
         title = QLabel("Profiles")
         title.setObjectName("PageTitle")
-        subtitle = QLabel("Your original files stay untouched; a generated copy is used at runtime.")
+        subtitle = QLabel("Imports stay untouched; a generated copy runs.")
         subtitle.setObjectName("PageSubtitle")
+        subtitle.setWordWrap(True)
         titles.addWidget(title)
         titles.addWidget(subtitle)
-        header.addLayout(titles)
+        header.addLayout(titles, 1)
         header.addStretch(1)
 
         self._import_button = QPushButton("Import YAML…")
