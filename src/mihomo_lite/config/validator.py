@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from mihomo_lite.config.rules import SEVERITY_ERROR, analyze_rules
 from mihomo_lite.utils.exceptions import ConfigError
 
 _PROXY_GROUP_TYPES = {
@@ -135,16 +136,12 @@ def _is_known_provider(name: str, providers: set[str]) -> bool:
 
 
 def _validate_rules(data: dict[str, Any], result: ValidationResult) -> None:
-    rules = data.get("rules")
-    if rules is None:
-        if not data.get("rule-providers") and not data.get("sub-rules"):
-            result.add_warning("no 'rules' section; everything will be routed by the final rule")
-        return
-    if not isinstance(rules, list):
-        result.add_error("'rules' must be a list")
-        return
-    if not rules:
-        result.add_warning("'rules' is empty; traffic will use the default outbound")
+    analysis = analyze_rules(data)
+    for issue in analysis.issues:
+        if issue.severity == SEVERITY_ERROR:
+            result.add_error(issue.as_text())
+        else:
+            result.add_warning(issue.as_text())
 
 
 def _validate_ports(data: dict[str, Any], result: ValidationResult) -> None:

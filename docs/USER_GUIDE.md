@@ -41,6 +41,18 @@ Press **Connect** on the Dashboard (or the big switch). The sequence is:
 Press again to disconnect. Your previous system proxy setting is restored before the core
 stops.
 
+## 4.5 Rule checks
+
+Selecting a profile runs a static check of its routing rules and prints a summary such as
+"Rule check: 128 rules · final Proxy · 2 warnings". Typical findings:
+
+- a policy name that does not exist (typo in a group name)
+- rules placed after MATCH, which the core never evaluates
+- IP/GEOIP rules without no-resolve (unnecessary DNS lookups)
+- duplicate rules, stray spaces, undefined rule-providers
+
+Errors block the import; warnings are informational and the profile still works.
+
 ## 5. Switch nodes
 
 Open **Proxies** while connected. Pick a policy group on the left, then either double-click a

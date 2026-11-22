@@ -43,6 +43,7 @@ def test_import_file_stores_the_original(manager, paths, tmp_path):
     assert profile.name == "Home"
     assert profile.kind is ProfileKind.LOCAL
     assert profile.proxy_count == 1
+    assert profile.rule_count == 1
     assert manager.profile_path(profile.id).read_text(encoding="utf-8") == VALID
     assert manager.active_id == profile.id
 

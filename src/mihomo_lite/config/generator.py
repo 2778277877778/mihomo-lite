@@ -14,6 +14,7 @@ from typing import Any
 import yaml
 
 from mihomo_lite.config.defaults import MANAGED_KEYS
+from mihomo_lite.config.rules import default_policy, has_final_match
 from mihomo_lite.utils.exceptions import ConfigError
 from mihomo_lite.utils.fs import atomic_write_text
 
@@ -83,6 +84,15 @@ def generate_runtime_config(
     if data.get("listeners"):
         notes.append("custom listeners were removed; only the local mixed port is exposed")
     data.pop("listeners", None)
+
+    rules = data.get("rules")
+    if isinstance(rules, list):
+        cleaned = [rule for rule in rules if isinstance(rule, str) and rule.strip()]
+        if not has_final_match(data):
+            policy = default_policy(data)
+            cleaned.append(f"MATCH,{policy}")
+            notes.append(f"appended a final 'MATCH,{policy}' rule for unmatched traffic")
+        data["rules"] = cleaned
 
     profile_section = data.get("profile")
     profile_section = dict(profile_section) if isinstance(profile_section, dict) else {}

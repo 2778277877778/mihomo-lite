@@ -99,6 +99,46 @@ def test_generator_strips_extra_controllers(sample_profile):
     assert any("listener" in note for note in generated.notes)
 
 
+def test_generator_appends_a_final_match(sample_profile):
+    sample_profile["rules"] = ["DOMAIN-SUFFIX,example.com,Proxy"]
+    generated = generate_runtime_config(sample_profile, mixed_port=1, api_port=2, secret="x")
+    assert generated.data["rules"][-1] == "MATCH,Proxy"
+    assert any("MATCH,Proxy" in note for note in generated.notes)
+
+
+def test_generator_keeps_an_existing_match(sample_profile):
+    generated = generate_runtime_config(sample_profile, mixed_port=1, api_port=2, secret="x")
+    rules = generated.data["rules"]
+    assert rules == ["MATCH,Proxy"]
+    assert not any("appended" in note for note in generated.notes)
+
+
+def test_generator_adds_match_to_empty_rules(sample_profile):
+    sample_profile["rules"] = []
+    generated = generate_runtime_config(sample_profile, mixed_port=1, api_port=2, secret="x")
+    assert generated.data["rules"] == ["MATCH,Proxy"]
+
+
+def test_generator_uses_direct_without_groups(sample_profile):
+    sample_profile["proxy-groups"] = []
+    sample_profile["rules"] = ["DOMAIN,example.com,DIRECT"]
+    generated = generate_runtime_config(sample_profile, mixed_port=1, api_port=2, secret="x")
+    assert generated.data["rules"][-1] == "MATCH,DIRECT"
+
+
+def test_validator_reports_rule_policy_typos(sample_profile):
+    sample_profile["rules"] = ["DOMAIN,example.com,Typo", "MATCH,Proxy"]
+    result = validate_config(sample_profile)
+    assert result.ok
+    assert any("unknown policy 'Typo'" in warning for warning in result.warnings)
+
+
+def test_validator_rejects_empty_rule_payload(sample_profile):
+    sample_profile["rules"] = ["DOMAIN-SUFFIX,,DIRECT", "MATCH,Proxy"]
+    result = validate_config(sample_profile)
+    assert not result.ok
+
+
 def test_generator_rejects_missing_secret(sample_profile):
     with pytest.raises(ConfigError):
         generate_runtime_config(sample_profile, mixed_port=1, api_port=2, secret="")

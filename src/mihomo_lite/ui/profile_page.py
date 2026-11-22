@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mihomo_lite.config.loader import load_yaml_file
+from mihomo_lite.config.rules import analyze_rules
 from mihomo_lite.core.services import Services
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.models.profile import Profile, ProfileKind
@@ -69,6 +71,11 @@ class ProfilePage(QWidget):
         self._details.setWordWrap(True)
         root.addWidget(self._details)
 
+        self._rule_hint = QLabel("")
+        self._rule_hint.setObjectName("Hint")
+        self._rule_hint.setWordWrap(True)
+        root.addWidget(self._rule_hint)
+
         actions = QHBoxLayout()
         self._activate_button = QPushButton("Use this profile")
         self._activate_button.setObjectName("Primary")
@@ -94,7 +101,8 @@ class ProfilePage(QWidget):
             marker = "● " if profile.id == current else "   "
             label = f"{marker}{profile.name}"
             sub = (
-                f"{profile.kind.label} · {profile.proxy_count} proxies · "
+                f"{profile.kind.label} · {self._count(profile.proxy_count, 'proxy', 'proxies')} · "
+                f"{self._count(profile.rule_count, 'rule', 'rules')} · "
                 f"updated {self._when(profile.updated_at)}"
             )
             item = QListWidgetItem(f"{label}\n{sub}")
@@ -106,6 +114,10 @@ class ProfilePage(QWidget):
         if self._list.currentRow() < 0 and self._list.count():
             self._list.setCurrentRow(0)
         self._on_selection(self._list.currentRow())
+
+    @staticmethod
+    def _count(value: int, singular: str, plural: str) -> str:
+        return f"{value} {singular if value == 1 else plural}"
 
     @staticmethod
     def _when(timestamp: float) -> str:
@@ -131,7 +143,9 @@ class ProfilePage(QWidget):
         lines = [
             f"<b>{profile.name}</b> · {profile.kind.label}"
             + (" · <b>active</b>" if active else ""),
-            f"{profile.proxy_count} proxies · {profile.group_count} groups · "
+            f"{self._count(profile.proxy_count, 'proxy', 'proxies')} · "
+            f"{self._count(profile.group_count, 'group', 'groups')} · "
+            f"{self._count(profile.rule_count, 'rule', 'rules')} · "
             f"{profile.size / 1024:.1f} KB · updated {self._when(profile.updated_at)}",
         ]
         if profile.url:
@@ -139,9 +153,27 @@ class ProfilePage(QWidget):
         if profile.note:
             lines.append(f"Notes: {profile.note}")
         self._details.setText("<br>".join(lines))
+        self._rule_hint.setText(self._describe_rules(profile))
         self._activate_button.setEnabled(not active)
         self._refresh_button.setEnabled(profile.kind is ProfileKind.SUBSCRIPTION)
         self._delete_button.setEnabled(True)
+
+    def _describe_rules(self, profile: Profile) -> str:
+        """Run the rule checker on the stored file, so problems show before Connect."""
+        try:
+            data = load_yaml_file(self._services.profiles.profile_path(profile.id))
+        except Exception as exc:  # noqa: BLE001 - display only
+            return f"Rule check unavailable: {exc}"
+        analysis = analyze_rules(data)
+        head = f"Rule check: {analysis.summary()}"
+        if not analysis.issues:
+            return head
+        problems = analysis.messages(limit=3)
+        more = len(analysis.issues) - len(problems)
+        text = head + "\n" + "\n".join(problems)
+        if more > 0:
+            text += f"\n(+{more} more, see Logs after connecting)"
+        return text
 
     # -- actions -----------------------------------------------------------
     def _import_file(self) -> None:

@@ -32,6 +32,7 @@ class Profile:
     size: int = 0
     proxy_count: int = 0
     group_count: int = 0
+    rule_count: int = 0
     note: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -45,6 +46,7 @@ class Profile:
             "size": self.size,
             "proxy_count": self.proxy_count,
             "group_count": self.group_count,
+            "rule_count": self.rule_count,
             "note": self.note,
             "extra": self.extra,
         }
@@ -64,6 +66,7 @@ class Profile:
             size=int(data.get("size", 0) or 0),
             proxy_count=int(data.get("proxy_count", 0) or 0),
             group_count=int(data.get("group_count", 0) or 0),
+            rule_count=int(data.get("rule_count", 0) or 0),
             note=str(data.get("note", "")),
             extra=dict(data.get("extra") or {}),
         )

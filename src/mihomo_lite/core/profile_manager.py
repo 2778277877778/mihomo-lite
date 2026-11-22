@@ -162,6 +162,7 @@ class ProfileManager(QObject):
             size=len(text.encode("utf-8")),
             proxy_count=len(data.get("proxies") or []),
             group_count=len(data.get("proxy-groups") or []),
+            rule_count=len(data.get("rules") or []),
             note="; ".join(result.warnings[:3]),
         )
         self._profiles.append(profile)
@@ -202,6 +203,7 @@ class ProfileManager(QObject):
         profile.size = len(text.encode("utf-8"))
         profile.proxy_count = len(data.get("proxies") or [])
         profile.group_count = len(data.get("proxy-groups") or [])
+        profile.rule_count = len(data.get("rules") or [])
         profile.note = "; ".join(result.warnings[:3])
         self._save_index()
         self.profiles_changed.emit()

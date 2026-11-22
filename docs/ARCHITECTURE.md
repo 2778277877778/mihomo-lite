@@ -73,6 +73,13 @@ profiles/<id>/original.yaml   immutable, exactly what the user imported
 runtime/generated.yaml        hardened copy written atomically
 ~~~
 
+Rule checking (config/rules.py) runs before the copy is written. It validates rule
+types, referenced policies and rule-providers, duplicate rules, dead rules after MATCH,
+stray whitespace and missing no-resolve hints. A profile whose rules do not parse is
+rejected at import; warnings are shown on the Profiles page. When a profile has no final
+MATCH rule, the generator appends one (first selector group, else DIRECT) so unmatched
+traffic no longer depends on the core default.
+
 Hardening in config/generator.py:
 
 - external-controller is forced to 127.0.0.1:<random port>

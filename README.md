@@ -27,6 +27,8 @@ put everything back when you quit.
 - Windows system proxy handling (WinINET per-connection API + registry mirror)
 - Crash-safe proxy journal: restores your original setting after a crash
 - Proxy groups and node switching, latency tests
+- Routing rules are checked before connecting: unknown policies, rules after MATCH,
+  missing no-resolve and duplicate rules are reported with their line numbers
 - Live upload/download speed from the Mihomo WebSocket
 - Tray icon, start-with-Windows, single-instance guard
 - Frameless rounded window with frosted-glass surfaces (Windows acrylic blur) in dark and light
