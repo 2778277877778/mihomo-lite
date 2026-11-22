@@ -39,7 +39,8 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 - Optional TUN mode (mixed/system/gVisor stacks) with automatic elevation and wintun setup
 - Automatic subscription updates every 1-48 hours, with the previous file kept as a backup
 - Frameless rounded window with frosted glass (Windows acrylic) in dark and light
-- Tray icon, start-with-Windows, single-instance guard
+- Tray icon, start-with-Windows, single-instance guard, connect on launch
+- Log copy/export with secrets redacted, and a live node filter
 
 ### Install
 
@@ -135,7 +136,8 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 - 可选 TUN 模式（mixed/system/gVisor 三种栈），自动请求管理员权限并支持在线安装 wintun
 - 订阅自动更新（1–48 小时可调），更新前保留上一份配置
 - 无边框圆角窗口 + 磨砂玻璃（Windows 亚克力），深浅双主题
-- 托盘常驻、开机自启、单实例保护
+- 托盘常驻、开机自启、单实例保护、启动即连接
+- 日志一键复制/导出（自动脱敏），节点列表实时过滤
 
 ### 安装
 

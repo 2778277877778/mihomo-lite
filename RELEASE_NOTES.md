@@ -1,46 +1,28 @@
-# Mihomo Lite v0.2.1
+# Mihomo Lite v0.2.2
 
-Six reliability fixes for TUN mode, uninstall and subscription updates.
+Smaller package, faster start, better logs.
 
 ## English
 
-### Fixes
+- **Package 170.7 -> 164.0 MB**: unused Qt translations are no longer bundled.
+- **Faster cold start (4.25 -> 3.29 s)**: only the dashboard is built up front; other pages
+  are created on first open.
+- **Log copy/export**: copy the whole log or save it to a file; secrets stay redacted.
+- **Node filter** in Proxies, **Connect on launch** in Settings.
+- **Keyboard focus is visible again** (we no longer suppress focus outlines).
+- Dependency automation (Dependabot) and a CI badge in the README.
 
-- **Elevated restart no longer races the single-instance lock** - the new process retries
-  for up to 2.5 s, and the old one releases the lock before exiting, so TUN restarts open
-  the window instead of quitting silently.
-- **Uninstalling restores the system proxy** - the uninstaller asks the running app to quit
-  gracefully (`--shutdown`) and repairs any leftover journal before falling back to taskkill.
-- **TUN failures are visible** - after connecting, core output is checked for TUN/wintun
-  errors; a broken tunnel now produces a warning instead of a green light.
-- **Subscription tokens are redacted** - URLs in download errors and the profile details
-  mask token/key/auth parameters.
-- **Updated active profiles reload live** - when the active subscription is refreshed while
-  connected, the runtime config is rewritten and pushed to the core via PUT /configs.
-- **Connect switch reflects reality** - declining the UAC prompt resets the switch instead
-  of leaving it on.
-
-### Install
-
-`MihomoLite-Setup-0.2.1-x64.exe` or `MihomoLite-v0.2.1-portable-x64.zip`.
-Windows 10/11 x64. The installer is not code-signed yet.
+Download `MihomoLite-Setup-0.2.2-x64.exe` or `MihomoLite-v0.2.2-portable-x64.zip`.
+Windows 10/11 x64; the installer is not signed yet.
 
 ## 中文
 
-### 修复
+- **包体 170.7 → 164.0 MB**：不再打包未使用的 Qt 翻译文件。
+- **冷启动 4.25 → 3.29 秒**：启动只构建仪表盘，其余页面首次打开时才创建。
+- **日志复制/导出**：可复制全部日志或保存为文件，密钥保持打码。
+- 代理页新增**节点过滤**，设置新增**启动即连接**。
+- **恢复键盘焦点边框**（不再全局屏蔽焦点）。
+- 引入 Dependabot 依赖更新，README 增加 CI 徽章。
 
-- **提权重启不再与单实例锁冲突**：新进程最多重试 2.5 秒，旧进程退出前主动释放锁，
-  TUN 重启不会再静默退出。
-- **卸载会恢复系统代理**：卸载器先用 `--shutdown` 让运行中的程序优雅退出，并兜底修复
-  残留的代理 journal，最后才使用 taskkill。
-- **TUN 失败可见**：连接后检查内核输出中的 TUN/wintun 错误，隧道没起来会给出警告，
-  不再显示"已连接"的绿灯。
-- **订阅 token 脱敏**：下载错误信息和个人资料详情中的 URL 会隐藏 token/key/auth 参数。
-- **活动配置热重载**：连接期间活动订阅更新后，自动重写运行配置并通过 PUT /configs
-  让内核立即生效。
-- **连接开关与实际状态一致**：取消 UAC 授权后开关会复位，不会停在"开"。
-
-### 安装
-
-`MihomoLite-Setup-0.2.1-x64.exe` 或 `MihomoLite-v0.2.1-portable-x64.zip`。
+下载 `MihomoLite-Setup-0.2.2-x64.exe` 或 `MihomoLite-v0.2.2-portable-x64.zip`；
 支持 Windows 10/11 x64，安装包暂未签名。
