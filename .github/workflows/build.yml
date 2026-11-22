@@ -29,6 +29,11 @@ jobs:
       - name: Build onedir package
         run: python scripts/build_windows.py
 
+      - name: Create portable archive
+        run: |
+          $tag = "${{ github.ref_name }}"
+          Compress-Archive -Path dist/MihomoLite/* -DestinationPath "packaging/output/MihomoLite-$tag-portable-x64.zip" -CompressionLevel Optimal
+
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
@@ -38,7 +43,7 @@ jobs:
 
       - name: Checksums
         run: |
-          Get-ChildItem packaging\output\*.exe | ForEach-Object {
+          Get-ChildItem packaging\output\* -Include *.exe,*.zip -File | ForEach-Object {
             (Get-FileHash $_.FullName -Algorithm SHA256).Hash + "  " + $_.Name
           } | Set-Content packaging\output\SHA256SUMS.txt
 
@@ -47,6 +52,7 @@ jobs:
           name: mihomo-lite-windows-x64
           path: |
             packaging/output/*.exe
+            packaging/output/*.zip
             packaging/output/SHA256SUMS.txt
             dist/MihomoLite/**
 
@@ -54,6 +60,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          generate_release_notes: true
           files: |
             packaging/output/*.exe
+            packaging/output/*.zip
             packaging/output/SHA256SUMS.txt
