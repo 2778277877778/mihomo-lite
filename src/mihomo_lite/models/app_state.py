@@ -49,6 +49,7 @@ class AppSettings(BaseModel):
     minimize_to_tray: bool = True
     close_to_tray: bool = True
     start_minimized: bool = False
+    start_connected: bool = False
     log_level: str = "INFO"
     core_path: str = ""
     mixed_port: int = 0

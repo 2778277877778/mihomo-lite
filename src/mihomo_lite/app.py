@@ -150,7 +150,7 @@ class MihomoLiteApp:
         self.updates.active_profile_updated.connect(
             lambda _profile: self.connection.reload_active_config()
         )
-        if self._args.connect:
+        if self._args.connect or self.settings.current.start_connected:
             QTimer.singleShot(400, self.connection.connect)
 
         signal_handlers()

@@ -4,6 +4,8 @@
 
 A liquid-glass Windows client for the [Mihomo](https://github.com/MetaCubeX/mihomo) proxy core.
 
+![tests](https://github.com/2778277877778/mihomo-lite/actions/workflows/tests.yml/badge.svg)
+
 [English](#english) · [中文](#中文)
 
 ![Dashboard](docs/images/dashboard.png)

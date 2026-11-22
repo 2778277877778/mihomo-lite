@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPushButton,
@@ -73,6 +74,11 @@ class ProxyPage(QWidget):
         self._group_hint = QLabel("Select a policy group.")
         self._group_hint.setObjectName("Hint")
         right_layout.addWidget(self._group_hint)
+
+        self._node_filter = QLineEdit()
+        self._node_filter.setPlaceholderText("Filter nodes…")
+        self._node_filter.textChanged.connect(self._filter_nodes)
+        right_layout.addWidget(self._node_filter)
 
         self._node_list = QListWidget()
         self._node_list.itemDoubleClicked.connect(self._activate_item)
@@ -154,6 +160,12 @@ class ProxyPage(QWidget):
             self._node_list.addItem(item)
             if member == group.now:
                 self._node_list.setCurrentItem(item)
+
+    def _filter_nodes(self, text: str) -> None:
+        needle = text.strip().lower()
+        for row in range(self._node_list.count()):
+            item = self._node_list.item(row)
+            item.setHidden(bool(needle) and needle not in item.text().lower())
 
     # -- actions -----------------------------------------------------------
     def _activate_current(self) -> None:

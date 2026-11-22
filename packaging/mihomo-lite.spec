@@ -39,6 +39,14 @@ a = Analysis(
     noarchive=False,
 )
 
+# Qt ships ~7 MB of translations we never use (all UI strings are ours), and the
+# unused QML/3D plugins were already excluded above.
+a.datas = [
+    entry
+    for entry in a.datas
+    if "translations" not in entry[0].replace("\\", "/").lower()
+]
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(

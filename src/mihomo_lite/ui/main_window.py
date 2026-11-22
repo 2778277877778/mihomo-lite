@@ -183,13 +183,17 @@ class MainWindow(QMainWindow):
         outer.addWidget(self._titlebar)
 
         self._stack = QStackedWidget()
-        self._dashboard = DashboardPage(self._services)
-        self._proxies = ProxyPage(self._services)
-        self._profiles = ProfilePage(self._services)
-        self._settings = SettingsPage(self._services)
-        self._logs = LogsPage(self._services)
-        for page in (self._dashboard, self._proxies, self._profiles, self._settings, self._logs):
-            self._stack.addWidget(page)
+        self._pages: dict[int, QWidget] = {}
+        self._factories = [
+            lambda: DashboardPage(self._services),
+            lambda: ProxyPage(self._services),
+            lambda: ProfilePage(self._services),
+            lambda: SettingsPage(self._services),
+            lambda: LogsPage(self._services),
+        ]
+        # Only the dashboard is built up front; every other page is created the
+        # first time it is opened, which keeps cold start short.
+        self._dashboard = self._ensure_page(0)
 
         body = QHBoxLayout()
         body.setContentsMargins(16, 4, 16, 10)
@@ -225,7 +229,7 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem(name)
             item.setSizeHint(QSize(0, 40))
             self._nav.addItem(item)
-        self._nav.currentRowChanged.connect(self._stack.setCurrentIndex)
+        self._nav.currentRowChanged.connect(self._show_index)
         layout.addWidget(self._nav, 1)
 
         version = QLabel(f"v{__version__}")
@@ -263,7 +267,6 @@ class MainWindow(QMainWindow):
         connection.session_changed.connect(lambda _s: self._status_label.setText(connection.state.label))
         connection.elevation_required.connect(self._on_elevation_required)
 
-        self._settings.theme_changed.connect(self.apply_theme)
         self._tray.show_requested.connect(self.show_and_raise)
         self._tray.quit_requested.connect(self.request_quit)
 
@@ -290,6 +293,23 @@ class MainWindow(QMainWindow):
         self.showNormal()
         self.raise_()
         self.activateWindow()
+
+    def _ensure_page(self, index: int) -> QWidget | None:
+        if index in self._pages:
+            return self._pages[index]
+        if not 0 <= index < len(self._factories):
+            return None
+        page = self._factories[index]()
+        if index == 3:  # SettingsPage emits theme changes
+            page.theme_changed.connect(self.apply_theme)
+        self._pages[index] = page
+        self._stack.addWidget(page)
+        return page
+
+    def _show_index(self, index: int) -> None:
+        page = self._ensure_page(index)
+        if page is not None:
+            self._stack.setCurrentWidget(page)
 
     def show_page(self, index: int) -> None:
         if 0 <= index < self._nav.count():

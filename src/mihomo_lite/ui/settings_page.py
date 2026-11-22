@@ -220,6 +220,9 @@ class SettingsPage(QWidget):
         for hours in (1, 3, 6, 12, 24, 48):
             self._update_interval.addItem(f"every {hours} h", hours)
         grid.addWidget(self._update_interval, 6, 1)
+
+        self._start_connected = QCheckBox("Connect on launch")
+        grid.addWidget(self._start_connected, 7, 0, 1, 2)
         grid.setColumnStretch(1, 1)
         layout.addLayout(grid)
         return card
@@ -233,6 +236,7 @@ class SettingsPage(QWidget):
         index = self._tun_stack.findData(settings.tun_stack)
         self._tun_stack.setCurrentIndex(max(0, index))
         self._tun_dns.setChecked(settings.tun_dns_hijack)
+        self._start_connected.setChecked(settings.start_connected)
         self._auto_update.setChecked(settings.auto_update_profiles)
         index = self._update_interval.findData(settings.auto_update_interval_hours)
         self._update_interval.setCurrentIndex(max(0, index))
@@ -318,6 +322,7 @@ class SettingsPage(QWidget):
             tun_dns_hijack=self._tun_dns.isChecked(),
             auto_update_profiles=self._auto_update.isChecked(),
             auto_update_interval_hours=self._update_interval.currentData(),
+            start_connected=self._start_connected.isChecked(),
             bypass=self._bypass.text().strip(),
             mixed_port=self._mixed_port.value(),
             api_port=self._api_port.value(),
