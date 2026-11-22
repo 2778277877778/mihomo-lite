@@ -41,6 +41,7 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 - Frameless rounded window with frosted glass (Windows acrylic) in dark and light
 - Tray icon, start-with-Windows, single-instance guard, connect on launch
 - Log copy/export with secrets redacted, and a live node filter
+- English / 中文 interface switch, public IP check and per-node speed test
 
 ### Install
 
@@ -70,7 +71,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # run
-pytest                         # 110 tests
+pytest                         # 117 tests
 ruff check src tests           # lint
 ```
 
@@ -138,6 +139,7 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 - 无边框圆角窗口 + 磨砂玻璃（Windows 亚克力），深浅双主题
 - 托盘常驻、开机自启、单实例保护、启动即连接
 - 日志一键复制/导出（自动脱敏），节点列表实时过滤
+- 中英文界面切换、公网 IP 检测、节点测速
 
 ### 安装
 
@@ -166,7 +168,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # 运行
-pytest                         # 110 个测试
+pytest                         # 117 个测试
 ruff check src tests           # 代码检查
 ```
 
