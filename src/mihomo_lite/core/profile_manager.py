@@ -24,6 +24,7 @@ from mihomo_lite.models.profile import Profile, ProfileKind
 from mihomo_lite.system.paths import AppPaths
 from mihomo_lite.utils.exceptions import ConfigError, MihomoLiteError
 from mihomo_lite.utils.fs import atomic_write_text, read_json
+from mihomo_lite.utils.logger import redact_url
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ def fetch_subscription(url: str, *, timeout: float = 25.0) -> str:
                     raise ConfigError("subscription is larger than the 16 MB limit")
                 chunks.append(chunk)
     except httpx.HTTPError as exc:
-        raise ConfigError(f"cannot download the subscription: {exc}") from exc
+        raise ConfigError(f"cannot download the subscription: {redact_url(str(exc))}") from exc
 
     try:
         return b"".join(chunks).decode("utf-8-sig")

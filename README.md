@@ -67,7 +67,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # run
-pytest                         # 103 tests
+pytest                         # 110 tests
 ruff check src tests           # lint
 ```
 
@@ -162,7 +162,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # 运行
-pytest                         # 103 个测试
+pytest                         # 110 个测试
 ruff check src tests           # 代码检查
 ```
 

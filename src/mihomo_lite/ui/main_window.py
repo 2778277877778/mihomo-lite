@@ -7,7 +7,7 @@ import os
 import sys
 from ctypes import wintypes
 
-from PySide6.QtCore import QEvent, QRectF, QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QApplication,
@@ -145,6 +145,8 @@ class TitleBar(QWidget):
 
 
 class MainWindow(QMainWindow):
+    restart_elevated = Signal()
+
     def __init__(self, services: Services, tray: TrayController, parent=None) -> None:
         super().__init__(parent)
         self._services = services
@@ -336,6 +338,7 @@ class MainWindow(QMainWindow):
     def _on_elevation_required(self, message: str) -> None:
         if not elevation.is_windows():
             QMessageBox.warning(self, "TUN mode", message)
+            self._dashboard.sync_state()
             return
         answer = QMessageBox.question(
             self,
@@ -343,17 +346,18 @@ class MainWindow(QMainWindow):
             message + "\n\nThe app will restart and connect again automatically.",
         )
         if answer != QMessageBox.StandardButton.Yes:
+            self._dashboard.sync_state()
             return
-        if elevation.relaunch_as_admin(["--elevated", "--connect"]):
-            self._force_quit = True
-            QApplication.instance().quit()
-        else:
-            QMessageBox.warning(
-                self,
-                "Restart failed",
-                "Mihomo Lite could not restart as administrator. "
-                "Start it manually with 'Run as administrator', or turn off TUN mode.",
-            )
+        self.restart_elevated.emit()
+
+    def elevation_failed(self) -> None:
+        QMessageBox.warning(
+            self,
+            "Restart failed",
+            "Mihomo Lite could not restart as administrator. "
+            "Start it manually with 'Run as administrator', or turn off TUN mode.",
+        )
+        self._dashboard.sync_state()
 
     def request_quit(self) -> None:
         self._force_quit = True

@@ -1,55 +1,46 @@
-# Mihomo Lite v0.2.0
+# Mihomo Lite v0.2.1
 
-TUN mode and automatic subscription updates, on top of the v0.1 glass client.
+Six reliability fixes for TUN mode, uninstall and subscription updates.
 
 ## English
 
-### Highlights
+### Fixes
 
-- **TUN mode (optional)** - capture all traffic through a virtual adapter instead of the
-  Windows system proxy. Three stacks (mixed / system / gVisor), automatic UAC elevation with
-  auto-reconnect, and one-click Wintun installation from Settings.
-- **Automatic subscription updates** - refresh subscriptions every 1, 3, 6, 12, 24 or 48 hours
-  while the app runs. Updates are validated, keep the previous file as a backup, and never
-  interrupt an active connection. **Profiles -> Update all** forces a check.
-- **Rule checking** - unknown policies, rules after MATCH, missing no-resolve, duplicates and
-  undefined rule-providers are reported with line numbers; a final MATCH is added when missing.
-- Everything from v0.1: bundled Mihomo core, crash-safe system proxy journal, proxy groups and
-  latency tests, live traffic, liquid-glass UI, tray and single-instance guard.
-
-### Notes
-
-- TUN requires administrator rights; the app offers to restart elevated and reconnect.
-- Wintun is not bundled (GPL-2.0, upstream project); Settings downloads the official build.
-- While TUN is enabled the system proxy is intentionally left untouched.
-- The installer is not code-signed yet: SmartScreen may ask for "More info -> Run anyway".
+- **Elevated restart no longer races the single-instance lock** - the new process retries
+  for up to 2.5 s, and the old one releases the lock before exiting, so TUN restarts open
+  the window instead of quitting silently.
+- **Uninstalling restores the system proxy** - the uninstaller asks the running app to quit
+  gracefully (`--shutdown`) and repairs any leftover journal before falling back to taskkill.
+- **TUN failures are visible** - after connecting, core output is checked for TUN/wintun
+  errors; a broken tunnel now produces a warning instead of a green light.
+- **Subscription tokens are redacted** - URLs in download errors and the profile details
+  mask token/key/auth parameters.
+- **Updated active profiles reload live** - when the active subscription is refreshed while
+  connected, the runtime config is rewritten and pushed to the core via PUT /configs.
+- **Connect switch reflects reality** - declining the UAC prompt resets the switch instead
+  of leaving it on.
 
 ### Install
 
-Download `MihomoLite-Setup-0.2.0-x64.exe`, or the portable
-`MihomoLite-v0.2.0-portable-x64.zip`. Windows 10/11 x64.
+`MihomoLite-Setup-0.2.1-x64.exe` or `MihomoLite-v0.2.1-portable-x64.zip`.
+Windows 10/11 x64. The installer is not code-signed yet.
 
 ## 中文
 
-### 本版重点
+### 修复
 
-- **TUN 模式（可选）**：通过虚拟网卡接管全部流量，不再依赖系统代理。支持 mixed / system /
-  gVisor 三种栈；需要管理员权限时自动弹 UAC、重启并自动重连；设置里一键安装 Wintun。
-- **订阅自动更新**：可设置每 1 / 3 / 6 / 12 / 24 / 48 小时自动更新订阅。更新前校验、保留
-  上一份配置、不会打断正在使用的连接；在 **Profiles -> Update all** 可立即检查。
-- **规则检查**：策略名拼错、MATCH 之后的死规则、缺 no-resolve、重复规则、未定义的
-  rule-provider 都会按行号提示；缺少最终 MATCH 时会自动补一条。
-- v0.1 的能力全部保留：内置内核、崩溃安全代理日志、节点切换与测速、实时流量、
-  磨砂玻璃界面、托盘与单实例保护。
-
-### 注意事项
-
-- TUN 需要管理员权限，程序会提示重启并以管理员身份自动重连。
-- Wintun 不随包分发（GPL-2.0，独立项目），在设置里按需下载官方版本。
-- 开启 TUN 时不会改动系统代理，避免两者互相干扰。
-- 安装包暂未签名，SmartScreen 可能提示，选择"更多信息 -> 仍要运行"。
+- **提权重启不再与单实例锁冲突**：新进程最多重试 2.5 秒，旧进程退出前主动释放锁，
+  TUN 重启不会再静默退出。
+- **卸载会恢复系统代理**：卸载器先用 `--shutdown` 让运行中的程序优雅退出，并兜底修复
+  残留的代理 journal，最后才使用 taskkill。
+- **TUN 失败可见**：连接后检查内核输出中的 TUN/wintun 错误，隧道没起来会给出警告，
+  不再显示"已连接"的绿灯。
+- **订阅 token 脱敏**：下载错误信息和个人资料详情中的 URL 会隐藏 token/key/auth 参数。
+- **活动配置热重载**：连接期间活动订阅更新后，自动重写运行配置并通过 PUT /configs
+  让内核立即生效。
+- **连接开关与实际状态一致**：取消 UAC 授权后开关会复位，不会停在"开"。
 
 ### 安装
 
-下载 `MihomoLite-Setup-0.2.0-x64.exe`（安装版）或 `MihomoLite-v0.2.0-portable-x64.zip`
-（便携版）。支持 Windows 10/11 x64。
+`MihomoLite-Setup-0.2.1-x64.exe` 或 `MihomoLite-v0.2.1-portable-x64.zip`。
+支持 Windows 10/11 x64，安装包暂未签名。

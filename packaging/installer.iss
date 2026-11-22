@@ -3,7 +3,7 @@
 ; Then run:     ISCC.exe packaging\installer.iss
 
 #define MyAppName "Mihomo Lite"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.1"
 #define MyAppPublisher "Mihomo Lite contributors"
 #define MyAppExeName "MihomoLite.exe"
 #define MyAppId "{{7B6D3A2E-9C41-4E77-9A2B-1F3C5D8E6A10}"
@@ -50,5 +50,7 @@ Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameter
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; The app cleans up its own proxy journal on exit; give it a moment if it is running.
-Filename: "{sys}\taskkill.exe"; Parameters: "/IM {#MyAppExeName}"; Flags: runhidden; RunOnceId: "StopApp"
+; Ask the running copy to restore the system proxy before it exits, then make sure
+; it is really gone (a hard kill without the first step would leave the proxy dangling).
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; Flags: runhidden waituntilterminated; RunOnceId: "StopApp"
+Filename: "{sys}\taskkill.exe"; Parameters: "/IM {#MyAppExeName}"; Flags: runhidden; RunOnceId: "KillAppOnce"

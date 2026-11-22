@@ -24,6 +24,7 @@ from mihomo_lite.config.rules import analyze_rules
 from mihomo_lite.core.services import Services
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.models.profile import Profile, ProfileKind
+from mihomo_lite.utils.logger import redact_url
 
 
 class ProfilePage(QWidget):
@@ -157,7 +158,7 @@ class ProfilePage(QWidget):
             f"{profile.size / 1024:.1f} KB · updated {self._when(profile.updated_at)}",
         ]
         if profile.url:
-            lines.append(f"Source: {profile.url}")
+            lines.append(f"Source: {redact_url(profile.url)}")
         if profile.note:
             lines.append(f"Notes: {profile.note}")
         self._details.setText("<br>".join(lines))

@@ -13,11 +13,12 @@ import logging
 import secrets
 import sys
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from mihomo_lite.config.generator import generate_runtime_config, write_runtime_config
 from mihomo_lite.config.validator import validate_config
@@ -104,10 +105,11 @@ class ConnectionManager(QObject):
         self._generation = 0
         self._stop_reason: str | None = None
         self._mode = "system"
+        self._recent_output: deque[str] = deque(maxlen=300)
 
         self._process.started.connect(self._on_core_started)
         self._process.stopped.connect(self._on_core_stopped)
-        self._process.output.connect(self.core_log.emit)
+        self._process.output.connect(self._on_core_output)
         self._process.failed.connect(self._on_core_failed)
 
     # -- public state ------------------------------------------------------
@@ -299,6 +301,8 @@ class ConnectionManager(QObject):
         self._write_session_file()
         self._set_state(ConnectionState.CONNECTED)
         self.session_changed.emit(self._session)
+        if self._mode == "tun":
+            QTimer.singleShot(2500, self._verify_tun_started)
         log.info(
             "connected: profile=%s mixed=%s api=%s core=%s",
             self._profile_name,
@@ -306,6 +310,69 @@ class ConnectionManager(QObject):
             self._api_port,
             core_version,
         )
+
+    def _verify_tun_started(self) -> None:
+        """The core answers /version even when the TUN device failed to open.
+
+        Watch the first seconds of core output and turn a silent failure into a
+        visible warning instead of a green light that proxies nothing.
+        """
+        if self._mode != "tun" or self._state is not ConnectionState.CONNECTED:
+            return
+        lines = [line.lower() for line in self._recent_output]
+        problems = [
+            line
+            for line in lines
+            if ("tun" in line or "wintun" in line)
+            and ("error" in line or "failed" in line or "cannot" in line)
+        ]
+        if problems:
+            self.warning.emit(
+                "TUN did not start cleanly: " + problems[-1][:200]
+            )
+            return
+        started = any(
+            "tun" in line and ("listening" in line or "started" in line) for line in lines
+        )
+        if not started:
+            self.warning.emit(
+                "TUN status is unconfirmed; check Logs if traffic does not go through Mihomo."
+            )
+
+    def reload_active_config(self) -> bool:
+        """Rewrite the runtime config from the active profile and ask the core to reload."""
+        if self._state is not ConnectionState.CONNECTED or self._api is None:
+            return False
+        settings = self._settings.current
+        try:
+            data = self._profiles.load_active_config()
+            result = validate_config(data)
+            if not result.ok:
+                raise ConfigError("; ".join(result.errors))
+            generated = generate_runtime_config(
+                data,
+                mixed_port=self._mix_port,
+                api_port=self._api_port,
+                secret=self._secret,
+                log_level=settings.log_level,
+                system_proxy=self._mode == "system",
+                tun=self._mode == "tun",
+                tun_stack=settings.tun_stack,
+                tun_dns_hijack=settings.tun_dns_hijack,
+            )
+            write_runtime_config(self._paths.runtime_config, generated)
+        except (ConfigError, OSError, ValueError) as exc:
+            self.warning.emit(f"Could not reload the updated profile: {exc}")
+            return False
+
+        api = self._api
+        self._runner.submit(
+            api.reload_config,
+            args=(str(self._paths.runtime_config),),
+            on_success=lambda _result: self.warning.emit("The active profile was reloaded."),
+            on_error=lambda message: self.warning.emit(f"Core reload failed: {message}"),
+        )
+        return True
 
     def _on_api_failed(self, token: int, message: str) -> None:
         if token != self._generation:
@@ -315,6 +382,10 @@ class ConnectionManager(QObject):
         self._stop_reason = "error"
         self._teardown()
         self._fail(f"The Mihomo core did not become ready: {message}")
+
+    def _on_core_output(self, line: str) -> None:
+        self._recent_output.append(line)
+        self.core_log.emit(line)
 
     def _on_core_started(self, pid: int) -> None:
         self.core_started.emit(pid)

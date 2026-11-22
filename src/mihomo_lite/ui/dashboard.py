@@ -160,6 +160,12 @@ class DashboardPage(QWidget):
             self._services.connection.connect()
         elif not checked and state in (ConnectionState.CONNECTED, ConnectionState.STARTING):
             self._services.connection.disconnect()
+        # connect() can bail out before changing state (missing profile, elevation
+        # prompt declined); resync the switch so it never lies about the state.
+        self.sync_state()
+
+    def sync_state(self) -> None:
+        self._on_state(self._services.connection.state)
 
     def _on_state(self, state: ConnectionState) -> None:
         self._pill.set_state(state)

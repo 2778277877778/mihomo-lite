@@ -16,7 +16,9 @@ _MAX_RECORDS = 2000
 _secrets: set[str] = set()
 _secrets_lock = Lock()
 
-_URL_SECRET = re.compile(r"(token|secret|password)=([^&\s]+)", re.IGNORECASE)
+_URL_SECRET = re.compile(
+    r"(token|secret|password|key|auth|signature|sign)=([^&\s]+)", re.IGNORECASE
+)
 
 
 def register_secret(value: str | None) -> None:

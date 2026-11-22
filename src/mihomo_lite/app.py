@@ -20,7 +20,9 @@ from mihomo_lite.core.state_manager import SettingsStore
 from mihomo_lite.core.traffic_monitor import TrafficMonitor
 from mihomo_lite.core.update_scheduler import UpdateScheduler
 from mihomo_lite.mihomo.core_manager import CoreManager
+from mihomo_lite.system import elevation
 from mihomo_lite.system.paths import app_paths
+from mihomo_lite.system.shutdown import run_shutdown
 from mihomo_lite.system.single_instance import SingleInstance
 from mihomo_lite.ui.icon import app_icon
 from mihomo_lite.ui.main_window import MainWindow
@@ -118,13 +120,15 @@ class MihomoLiteApp:
             print("selftest ok")
             return 0
 
-        if not self.single.is_primary:
+        if not self.single.is_primary and not self.single.wait_for_primary():
             log.info("another instance is already running; asking it to show")
             SingleInstance.notify_existing()
             return 0
 
         self.single.start_server()
         self.single.activated.connect(self.window.show_and_raise)
+        self.single.quit_requested.connect(self.window.request_quit)
+        self.window.restart_elevated.connect(self._restart_elevated)
 
         self.connection.recover_after_crash()
         self._restore_last_profile()
@@ -143,11 +147,23 @@ class MihomoLiteApp:
             self.tray.notify(__app_name__, "Running in the background. Use the tray icon to open.")
 
         self.updates.start()
+        self.updates.active_profile_updated.connect(
+            lambda _profile: self.connection.reload_active_config()
+        )
         if self._args.connect:
             QTimer.singleShot(400, self.connection.connect)
 
         signal_handlers()
         return self.qt.exec()
+
+    def _restart_elevated(self) -> None:
+        """Relaunch elevated, then hand the single-instance lock over."""
+        if not elevation.relaunch_as_admin(["--elevated", "--connect"]):
+            self.window.elevation_failed()
+            return
+        self._force_quit = True
+        self.single.release()
+        self.qt.quit()
 
     def _restore_last_profile(self) -> None:
         settings = self.settings.current
@@ -188,6 +204,8 @@ def signal_handlers() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(argv if argv is not None else sys.argv)
+    if "--shutdown" in argv:
+        return run_shutdown(argv)
     app = MihomoLiteApp(argv)
     return app.run()
 
