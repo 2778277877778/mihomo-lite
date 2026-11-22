@@ -199,15 +199,23 @@ class DashboardPage(QWidget):
             self._proxy_row.set_value(
                 f"127.0.0.1:{session.mixed_port}  ·  API {session.api_port}"
             )
-            state = "enabled" if self._services.settings.current.system_proxy else "disabled"
-            self._system_row.set_value(f"{state}  ·  up {uptime}")
+            if session.mode == "tun":
+                self._system_row.set_value(f"TUN mode  ·  up {uptime}")
+            elif session.mode == "system":
+                self._system_row.set_value(f"system proxy  ·  up {uptime}")
+            else:
+                self._system_row.set_value(f"off  ·  up {uptime}")
         else:
+            settings = self._services.settings.current
             self._profile_row.set_value(profile.name if profile else "none selected")
             self._core_row.set_value("not running")
             self._proxy_row.set_value("-")
-            self._system_row.set_value(
-                "will be enabled" if self._services.settings.current.system_proxy else "disabled"
-            )
+            if settings.tun_enabled:
+                self._system_row.set_value("TUN mode (administrator required)")
+            else:
+                self._system_row.set_value(
+                    "will be enabled" if settings.system_proxy else "disabled"
+                )
 
     def _on_traffic(self, sample: TrafficSample) -> None:
         self._last_sample = sample

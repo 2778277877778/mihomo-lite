@@ -55,7 +55,11 @@ class AppSettings(BaseModel):
     api_port: int = 0
     last_profile_id: str = ""
     auto_update_profiles: bool = False
+    auto_update_interval_hours: int = 12
     notifications: bool = True
+    tun_enabled: bool = False
+    tun_stack: str = "mixed"
+    tun_dns_hijack: bool = True
     window_width: int = 980
     window_height: int = 660
 
@@ -73,6 +77,21 @@ class AppSettings(BaseModel):
         value = value.upper()
         if value not in allowed:
             raise ValueError("log_level must be one of " + ", ".join(sorted(allowed)))
+        return value
+
+    @field_validator("tun_stack")
+    @classmethod
+    def _check_stack(cls, value: str) -> str:
+        value = value.lower()
+        if value not in {"system", "gvisor", "mixed"}:
+            raise ValueError("tun_stack must be system, gvisor or mixed")
+        return value
+
+    @field_validator("auto_update_interval_hours")
+    @classmethod
+    def _check_interval(cls, value: int) -> int:
+        if value not in {1, 3, 6, 12, 24, 48}:
+            raise ValueError("auto_update_interval_hours must be one of 1, 3, 6, 12, 24, 48")
         return value
 
     @field_validator("mixed_port", "api_port")

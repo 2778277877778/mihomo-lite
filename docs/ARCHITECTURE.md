@@ -94,6 +94,23 @@ Hardening in config/generator.py:
 This means a hostile or careless subscription cannot expose the proxy to the LAN or open a
 remote control port.
 
+## TUN mode
+
+TUN is opt-in (Settings -> Network). Because a virtual adapter needs administrator rights,
+the connection manager checks elevation first and emits `elevation_required`; the window
+offers to relaunch the app elevated and reconnect. The generator then emits a TUN section
+(auto-route, auto-detect-interface, optional DNS hijack) plus a fake-ip DNS block, and the
+system proxy is deliberately left untouched. The core uses `wintun.dll`, which is not
+bundled: Settings downloads the official build on request and stores it next to the core.
+
+## Subscription updates
+
+core/update_scheduler.py ticks every 15 minutes (first check after 2 minutes) and refreshes
+subscriptions that are older than the configured interval (1-48 h). Updates run one at a
+time through TaskRunner, keep the previous file as previous.yaml, validate the new content
+before replacing it, and never interrupt a running connection. The active profile is
+announced after an update so the UI can ask for a reconnect.
+
 ## System proxy safety
 
 system/proxy.py uses the WinINET per-connection option API (INTERNET_OPTION_PER_CONNECTION_OPTION)

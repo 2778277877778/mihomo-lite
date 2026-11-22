@@ -53,6 +53,25 @@ Selecting a profile runs a static check of its routing rules and prints a summar
 
 Errors block the import; warnings are informational and the profile still works.
 
+## 4.6 TUN mode (optional)
+
+TUN captures traffic at the adapter level instead of using the system proxy. It needs
+administrator rights and the Wintun driver.
+
+1. **Settings -> Network** -> enable **TUN mode** and choose a stack (Mixed is a good default).
+2. If the hint says wintun.dll is missing, press **Download wintun** once.
+3. Connect. Windows shows a UAC prompt; the app restarts elevated and reconnects by itself.
+
+While TUN is on, the Windows system proxy is left untouched (TUN already captures traffic).
+Turn TUN off to go back to system-proxy mode.
+
+## 4.7 Automatic subscription updates
+
+**Settings -> Application** -> **Update subscriptions automatically**, then pick an interval
+(1-48 h). Updates run in the background while the app is open, keep the previous file as a
+backup, and are validated before replacing anything. If the active profile changes, disconnect
+and connect again to apply it. **Profiles -> Update all** triggers a check immediately.
+
 ## 5. Switch nodes
 
 Open **Proxies** while connected. Pick a policy group on the left, then either double-click a

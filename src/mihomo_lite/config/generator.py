@@ -46,6 +46,9 @@ def generate_runtime_config(
     secret: str,
     log_level: str = "info",
     system_proxy: bool = True,
+    tun: bool = False,
+    tun_stack: str = "mixed",
+    tun_dns_hijack: bool = True,
 ) -> GeneratedConfig:
     """Return a hardened copy of *profile* ready for the core to load."""
     if not isinstance(profile, dict):
@@ -76,10 +79,32 @@ def generate_runtime_config(
     data["mode"] = str(data.get("mode", "rule")).lower()
     data["ipv6"] = bool(data.get("ipv6", False))
 
-    tun = data.get("tun")
-    if isinstance(tun, dict) and tun.get("enable"):
-        notes.append("TUN was requested by the profile but is disabled in this version")
-    data["tun"] = {"enable": False}
+    if tun:
+        stack = tun_stack if tun_stack in {"system", "gvisor", "mixed"} else "mixed"
+        tun_section = {
+            "enable": True,
+            "stack": stack,
+            "auto-route": True,
+            "auto-detect-interface": True,
+            "device": "MihomoLite",
+        }
+        if tun_dns_hijack:
+            tun_section["dns-hijack"] = ["any:53"]
+        data["tun"] = tun_section
+
+        dns = data.get("dns")
+        dns = dict(dns) if isinstance(dns, dict) else {}
+        dns["enable"] = True
+        dns.setdefault("enhanced-mode", "fake-ip")
+        dns.setdefault("fake-ip-range", "198.18.0.1/16")
+        dns.setdefault("fake-ip-filter", ["*.lan", "*.local", "localhost.ptlogin2.qq.com"])
+        data["dns"] = dns
+        notes.append(f"TUN enabled (stack={stack})")
+    else:
+        profile_tun = data.get("tun")
+        if isinstance(profile_tun, dict) and profile_tun.get("enable"):
+            notes.append("TUN was requested by the profile but is disabled in Settings")
+        data["tun"] = {"enable": False}
 
     if data.get("listeners"):
         notes.append("custom listeners were removed; only the local mixed port is exposed")

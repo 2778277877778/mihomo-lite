@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from mihomo_lite.core.services import Services
-from mihomo_lite.system import startup
+from mihomo_lite.system import startup, wintun
 
 
 class SettingsPage(QWidget):
@@ -146,22 +146,43 @@ class SettingsPage(QWidget):
         self._system_proxy = QCheckBox("Use the Windows system proxy while connected")
         grid.addWidget(self._system_proxy, 0, 0, 1, 2)
 
-        grid.addWidget(QLabel("Mixed port"), 1, 0)
+        self._tun_enabled = QCheckBox("TUN mode (captures all traffic, needs administrator)")
+        grid.addWidget(self._tun_enabled, 1, 0, 1, 2)
+
+        grid.addWidget(QLabel("TUN stack"), 2, 0)
+        self._tun_stack = QComboBox()
+        for label, value in (("Mixed", "mixed"), ("System", "system"), ("gVisor", "gvisor")):
+            self._tun_stack.addItem(label, value)
+        grid.addWidget(self._tun_stack, 2, 1)
+
+        self._tun_dns = QCheckBox("Hijack DNS in TUN mode (recommended)")
+        grid.addWidget(self._tun_dns, 3, 0, 1, 2)
+
+        tun_row = QHBoxLayout()
+        self._wintun_button = QPushButton("Download wintun")
+        self._wintun_button.clicked.connect(self._download_wintun)
+        self._wintun_hint = QLabel("")
+        self._wintun_hint.setObjectName("Hint")
+        tun_row.addWidget(self._wintun_button)
+        tun_row.addWidget(self._wintun_hint, 1)
+        grid.addLayout(tun_row, 4, 0, 1, 2)
+
+        grid.addWidget(QLabel("Mixed port"), 5, 0)
         self._mixed_port = QSpinBox()
         self._mixed_port.setRange(0, 65535)
         self._mixed_port.setSpecialValueText("Automatic")
-        grid.addWidget(self._mixed_port, 1, 1)
+        grid.addWidget(self._mixed_port, 5, 1)
 
-        grid.addWidget(QLabel("API port"), 2, 0)
+        grid.addWidget(QLabel("API port"), 6, 0)
         self._api_port = QSpinBox()
         self._api_port.setRange(0, 65535)
         self._api_port.setSpecialValueText("Automatic")
-        grid.addWidget(self._api_port, 2, 1)
+        grid.addWidget(self._api_port, 6, 1)
 
-        grid.addWidget(QLabel("Bypass list"), 3, 0)
+        grid.addWidget(QLabel("Bypass list"), 7, 0)
         self._bypass = QLineEdit()
         self._bypass.setPlaceholderText("localhost;127.*;<local>")
-        grid.addWidget(self._bypass, 3, 1)
+        grid.addWidget(self._bypass, 7, 1)
         grid.setColumnStretch(1, 1)
         layout.addLayout(grid)
         return card
@@ -190,6 +211,15 @@ class SettingsPage(QWidget):
         for level in ("INFO", "DEBUG", "WARNING", "ERROR"):
             self._log_level.addItem(level, level)
         grid.addWidget(self._log_level, 4, 1)
+
+        self._auto_update = QCheckBox("Update subscriptions automatically")
+        grid.addWidget(self._auto_update, 5, 0, 1, 2)
+
+        grid.addWidget(QLabel("Update interval"), 6, 0)
+        self._update_interval = QComboBox()
+        for hours in (1, 3, 6, 12, 24, 48):
+            self._update_interval.addItem(f"every {hours} h", hours)
+        grid.addWidget(self._update_interval, 6, 1)
         grid.setColumnStretch(1, 1)
         layout.addLayout(grid)
         return card
@@ -199,6 +229,13 @@ class SettingsPage(QWidget):
         settings = self._services.settings.current
         self._core_path.setText(settings.core_path)
         self._system_proxy.setChecked(settings.system_proxy)
+        self._tun_enabled.setChecked(settings.tun_enabled)
+        index = self._tun_stack.findData(settings.tun_stack)
+        self._tun_stack.setCurrentIndex(max(0, index))
+        self._tun_dns.setChecked(settings.tun_dns_hijack)
+        self._auto_update.setChecked(settings.auto_update_profiles)
+        index = self._update_interval.findData(settings.auto_update_interval_hours)
+        self._update_interval.setCurrentIndex(max(0, index))
         self._bypass.setText(settings.bypass)
         self._mixed_port.setValue(settings.mixed_port)
         self._api_port.setValue(settings.api_port)
@@ -210,6 +247,7 @@ class SettingsPage(QWidget):
         index = self._log_level.findData(settings.log_level)
         self._log_level.setCurrentIndex(max(0, index))
         self._update_core_hint()
+        self._update_wintun_hint()
 
     def _update_core_hint(self) -> None:
         downloaded = self._services.core.downloaded_path().exists()
@@ -220,6 +258,44 @@ class SettingsPage(QWidget):
             self._core_hint.setText(f"Core: not ready - {exc}")
         else:
             self._core_hint.setText(f"Core: {info.version} ({info.source}) at {info.path}")
+
+    def _update_wintun_hint(self) -> None:
+        try:
+            info = self._services.core.ensure()
+            found = wintun.locate(info.path)
+        except Exception:  # noqa: BLE001 - hint only
+            self._wintun_hint.setText("wintun.dll: core not ready")
+            self._wintun_button.setEnabled(False)
+            return
+        if found is None:
+            self._wintun_hint.setText("wintun.dll not installed (required for TUN)")
+            self._wintun_button.setEnabled(True)
+        else:
+            self._wintun_hint.setText(f"wintun.dll ready in {found.parent}")
+            self._wintun_button.setEnabled(False)
+
+    def _download_wintun(self) -> None:
+        self._wintun_button.setEnabled(False)
+        self._wintun_hint.setText("Downloading wintun…")
+
+        def _progress(done: int, total: int) -> None:
+            self.download_progress.emit(done, total)
+
+        def _install() -> str:
+            info = self._services.core.ensure()
+            return str(wintun.install(info.path, progress=_progress))
+
+        def _done(path: object) -> None:
+            self._wintun_hint.setText(f"wintun.dll installed at {path}")
+            self._status.setText("wintun installed. TUN mode is ready to use.")
+            self._update_wintun_hint()
+
+        def _failed(message: str) -> None:
+            self._wintun_hint.setText(f"wintun: {message}")
+            self._wintun_button.setEnabled(True)
+            QMessageBox.warning(self, "wintun", message)
+
+        self._services.runner.submit(_install, on_success=_done, on_error=_failed)
 
     def _remove_downloaded_core(self) -> None:
         self._services.core.remove_installed()
@@ -237,6 +313,11 @@ class SettingsPage(QWidget):
         settings = self._services.settings.update(
             core_path=self._core_path.text().strip(),
             system_proxy=self._system_proxy.isChecked(),
+            tun_enabled=self._tun_enabled.isChecked(),
+            tun_stack=self._tun_stack.currentData(),
+            tun_dns_hijack=self._tun_dns.isChecked(),
+            auto_update_profiles=self._auto_update.isChecked(),
+            auto_update_interval_hours=self._update_interval.currentData(),
             bypass=self._bypass.text().strip(),
             mixed_port=self._mixed_port.value(),
             api_port=self._api_port.value(),
@@ -248,6 +329,7 @@ class SettingsPage(QWidget):
         )
         self.theme_changed.emit(settings.theme)
         self._update_core_hint()
+        self._update_wintun_hint()
         self._status.setText(
             "Saved."
             + ("" if autostart_ok else " Autostart could not be updated.")

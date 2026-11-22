@@ -33,6 +33,10 @@ class ProfilePage(QWidget):
         self._build()
         services.profiles.profiles_changed.connect(self._reload)
         services.profiles.active_changed.connect(lambda _p: self._reload())
+        services.updates.started.connect(self._on_update_started)
+        services.updates.finished.connect(self._on_update_finished)
+        services.updates.profile_failed.connect(self._on_update_failed)
+        services.updates.active_profile_updated.connect(self._on_active_updated)
         services.connection.state_changed.connect(self._on_state)
         self._reload()
 
@@ -53,10 +57,14 @@ class ProfilePage(QWidget):
         header.addLayout(titles, 1)
         header.addStretch(1)
 
+        self._update_all_button = QPushButton("Update all")
+        self._update_all_button.setToolTip("Refresh every subscription that is due")
+        self._update_all_button.clicked.connect(self._update_all)
         self._import_button = QPushButton("Import YAML…")
         self._import_button.clicked.connect(self._import_file)
         self._subscribe_button = QPushButton("Add subscription…")
         self._subscribe_button.clicked.connect(self._add_subscription)
+        header.addWidget(self._update_all_button)
         header.addWidget(self._import_button)
         header.addWidget(self._subscribe_button)
         root.addLayout(header)
@@ -174,6 +182,33 @@ class ProfilePage(QWidget):
         if more > 0:
             text += f"\n(+{more} more, see Logs after connecting)"
         return text
+
+    # -- subscription updates ---------------------------------------------
+    def _update_all(self) -> None:
+        if not self._services.updates.update_all(force=True):
+            self._details.setText(
+                "Nothing to update (no subscription profiles), or an update is already running."
+            )
+
+    def _on_update_started(self) -> None:
+        self._update_all_button.setEnabled(False)
+        self._update_all_button.setText("Updating…")
+        self._details.setText("Updating subscriptions…")
+
+    def _on_update_finished(self, updated: int, failed: int) -> None:
+        self._update_all_button.setEnabled(True)
+        self._update_all_button.setText("Update all")
+        self._details.setText(f"Subscription update finished: {updated} updated, {failed} failed.")
+
+    def _on_update_failed(self, name: str, message: str) -> None:
+        self._details.setText(f"Update failed for {name}: {message}")
+
+    def _on_active_updated(self, profile: object) -> None:
+        name = getattr(profile, "name", "the active profile")
+        if self._services.connection.is_connected:
+            self._details.setText(
+                f"{name} was updated. Disconnect and connect again to apply the new configuration."
+            )
 
     # -- actions -----------------------------------------------------------
     def _import_file(self) -> None:

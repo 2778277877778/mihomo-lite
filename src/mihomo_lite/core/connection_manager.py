@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -28,6 +29,7 @@ from mihomo_lite.mihomo.core_manager import CoreManager
 from mihomo_lite.mihomo.health import wait_for_api
 from mihomo_lite.mihomo.process import MihomoProcess
 from mihomo_lite.models.app_state import ConnectionState
+from mihomo_lite.system import elevation, wintun
 from mihomo_lite.system.paths import AppPaths
 from mihomo_lite.system.proxy import SystemProxy
 from mihomo_lite.utils.exceptions import ConfigError, CoreError, ProxyError
@@ -47,6 +49,7 @@ class SessionInfo:
     api_port: int
     core_version: str
     started_at: float
+    mode: str = "system"
 
     @property
     def api_base_url(self) -> str:
@@ -64,6 +67,7 @@ class ConnectionManager(QObject):
     warning = Signal(str)
     core_log = Signal(str)
     core_started = Signal(int)
+    elevation_required = Signal(str)
 
     def __init__(
         self,
@@ -99,6 +103,7 @@ class ConnectionManager(QObject):
         self._profile_name = ""
         self._generation = 0
         self._stop_reason: str | None = None
+        self._mode = "system"
 
         self._process.started.connect(self._on_core_started)
         self._process.stopped.connect(self._on_core_stopped)
@@ -172,6 +177,19 @@ class ConnectionManager(QObject):
             return
 
         settings = self._settings.current
+        use_tun = settings.tun_enabled
+        if use_tun:
+            if sys.platform != "win32":
+                self._fail("TUN mode is only supported on Windows.")
+                return
+            if not elevation.is_admin():
+                self.elevation_required.emit(
+                    "TUN mode needs administrator rights. Restart Mihomo Lite as administrator?"
+                )
+                return
+
+        use_proxy = settings.system_proxy and not use_tun
+        self._mode = "tun" if use_tun else ("system" if use_proxy else "none")
         try:
             data = self._profiles.load_active_config()
             result = validate_config(data)
@@ -188,7 +206,10 @@ class ConnectionManager(QObject):
                 api_port=api_port,
                 secret=secret,
                 log_level=settings.log_level,
-                system_proxy=settings.system_proxy,
+                system_proxy=use_proxy,
+                tun=use_tun,
+                tun_stack=settings.tun_stack,
+                tun_dns_hijack=settings.tun_dns_hijack,
             )
             write_runtime_config(self._paths.runtime_config, generated)
             for note in generated.notes:
@@ -201,6 +222,13 @@ class ConnectionManager(QObject):
             core_info = self._core.ensure()
         except CoreError as exc:
             self._fail(str(exc))
+            return
+
+        if use_tun and wintun.locate(core_info.path) is None:
+            self._fail(
+                "TUN mode needs wintun.dll next to the core. "
+                "Open Settings -> Network and press 'Download wintun'."
+            )
             return
 
         self._secret = secret
@@ -250,7 +278,7 @@ class ConnectionManager(QObject):
             core_version = str(version.get("version", ""))
 
         settings = self._settings.current
-        if settings.system_proxy:
+        if self._mode == "system":
             try:
                 self._proxy.apply(f"127.0.0.1:{self._mix_port}", settings.bypass)
             except ProxyError as exc:
@@ -266,6 +294,7 @@ class ConnectionManager(QObject):
             api_port=self._api_port,
             core_version=core_version,
             started_at=time.time(),
+            mode=self._mode,
         )
         self._write_session_file()
         self._set_state(ConnectionState.CONNECTED)

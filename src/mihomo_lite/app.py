@@ -8,6 +8,7 @@ import sys
 import traceback
 from pathlib import Path
 
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mihomo_lite import __app_id__, __app_name__, __version__
@@ -17,6 +18,7 @@ from mihomo_lite.core.proxy_manager import ProxyManager
 from mihomo_lite.core.services import Services
 from mihomo_lite.core.state_manager import SettingsStore
 from mihomo_lite.core.traffic_monitor import TrafficMonitor
+from mihomo_lite.core.update_scheduler import UpdateScheduler
 from mihomo_lite.mihomo.core_manager import CoreManager
 from mihomo_lite.system.paths import app_paths
 from mihomo_lite.system.single_instance import SingleInstance
@@ -33,6 +35,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="mihomo-lite", description="Mihomo Lite")
     parser.add_argument("--hidden", action="store_true", help="start minimised to the tray")
     parser.add_argument("--debug", action="store_true", help="verbose console logging")
+    parser.add_argument("--connect", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--elevated", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--version", action="version", version=f"{__app_name__} {__version__}")
     parser.add_argument(
         "--selftest",
@@ -79,6 +83,7 @@ class MihomoLiteApp:
             traffic=self.traffic,
         )
         self.proxy = ProxyManager(lambda: self.connection.api, self.runner)
+        self.updates = UpdateScheduler(self.settings, self.profiles, self.runner)
         self.services = Services(
             paths=self.paths,
             settings=self.settings,
@@ -88,6 +93,7 @@ class MihomoLiteApp:
             core=self.core,
             runner=self.runner,
             traffic=self.traffic,
+            updates=self.updates,
         )
         self.tray = TrayController(self.services)
         self.window = MainWindow(self.services, self.tray)
@@ -136,6 +142,10 @@ class MihomoLiteApp:
         else:
             self.tray.notify(__app_name__, "Running in the background. Use the tray icon to open.")
 
+        self.updates.start()
+        if self._args.connect:
+            QTimer.singleShot(400, self.connection.connect)
+
         signal_handlers()
         return self.qt.exec()
 
@@ -153,11 +163,12 @@ class MihomoLiteApp:
         log.info("application is quitting")
         try:
             self.settings.update(
-                window_width=max(860, self.window.width()),
-                window_height=max(580, self.window.height()),
+                window_width=max(940, self.window.width()),
+                window_height=max(640, self.window.height()),
             )
         except Exception:  # noqa: BLE001
             pass
+        self.updates.stop()
         self.connection.shutdown()
         self.single.release()
 

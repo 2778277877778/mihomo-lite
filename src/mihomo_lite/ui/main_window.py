@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QStackedWidget,
     QVBoxLayout,
@@ -26,6 +27,7 @@ from PySide6.QtWidgets import (
 from mihomo_lite import __app_name__, __version__
 from mihomo_lite.core.services import Services
 from mihomo_lite.models.app_state import ConnectionState
+from mihomo_lite.system import elevation
 from mihomo_lite.ui import glass
 from mihomo_lite.ui.dashboard import DashboardPage
 from mihomo_lite.ui.icon import app_icon
@@ -257,6 +259,7 @@ class MainWindow(QMainWindow):
         connection.error_changed.connect(self._on_error)
         connection.warning.connect(self._on_warning)
         connection.session_changed.connect(lambda _s: self._status_label.setText(connection.state.label))
+        connection.elevation_required.connect(self._on_elevation_required)
 
         self._settings.theme_changed.connect(self.apply_theme)
         self._tray.show_requested.connect(self.show_and_raise)
@@ -329,6 +332,28 @@ class MainWindow(QMainWindow):
     def _on_warning(self, message: str) -> None:
         log.warning("%s", message)
         self._flash(message, 10000)
+
+    def _on_elevation_required(self, message: str) -> None:
+        if not elevation.is_windows():
+            QMessageBox.warning(self, "TUN mode", message)
+            return
+        answer = QMessageBox.question(
+            self,
+            "Administrator required",
+            message + "\n\nThe app will restart and connect again automatically.",
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        if elevation.relaunch_as_admin(["--elevated", "--connect"]):
+            self._force_quit = True
+            QApplication.instance().quit()
+        else:
+            QMessageBox.warning(
+                self,
+                "Restart failed",
+                "Mihomo Lite could not restart as administrator. "
+                "Start it manually with 'Run as administrator', or turn off TUN mode.",
+            )
 
     def request_quit(self) -> None:
         self._force_quit = True

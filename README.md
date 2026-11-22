@@ -18,7 +18,7 @@ Mihomo Lite is a small Windows desktop client for the Mihomo proxy core. It star
 switches nodes, points the Windows system proxy at it, and puts everything back when you quit.
 
 - **Simple** - connect, pick a node, disconnect. Nothing else in the way.
-- **Lightweight** - PySide6 Essentials only, no WebEngine, no background service, no TUN driver.
+- **Lightweight** - PySide6 Essentials only, no WebEngine, no background service; TUN is optional and off by default.
 - **Reliable** - the previous system proxy state is journalled before it is touched and restored
   on disconnect, on crash, and on the next start after a crash.
 - **Open** - MIT application code, about 3k lines you can read in one sitting.
@@ -34,6 +34,8 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 - Crash-safe proxy journal: your original proxy setting survives a hard kill
 - Proxy groups, node switching and latency tests
 - Live upload/download speed from the Mihomo WebSocket API
+- Optional TUN mode (mixed/system/gVisor stacks) with automatic elevation and wintun setup
+- Automatic subscription updates every 1-48 hours, with the previous file kept as a backup
 - Frameless rounded window with frosted glass (Windows acrylic) in dark and light
 - Tray icon, start-with-Windows, single-instance guard
 
@@ -65,7 +67,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # run
-pytest                         # 89 tests
+pytest                         # 103 tests
 ruff check src tests           # lint
 ```
 
@@ -113,7 +115,7 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 并在退出时把一切恢复原状。
 
 - **简单**：连接、选节点、断开，没有多余步骤。
-- **轻量**：只依赖 PySide6 Essentials，不带 WebEngine、不带后台服务、不做 TUN。
+- **轻量**：只依赖 PySide6 Essentials，不带 WebEngine、不带后台服务；TUN 为可选项，默认关闭。
 - **可靠**：改动系统代理前先写快照，断开、崩溃、崩溃后重启都会恢复原设置。
 - **开放**：应用代码 MIT，约 3k 行，一个下午能读完。
 
@@ -128,6 +130,8 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 - 崩溃安全的代理日志：强杀进程也不会把你的代理设置弄丢
 - 代理组、节点切换、延迟测试
 - 基于 Mihomo WebSocket 的实时上下行速度
+- 可选 TUN 模式（mixed/system/gVisor 三种栈），自动请求管理员权限并支持在线安装 wintun
+- 订阅自动更新（1–48 小时可调），更新前保留上一份配置
 - 无边框圆角窗口 + 磨砂玻璃（Windows 亚克力），深浅双主题
 - 托盘常驻、开机自启、单实例保护
 
@@ -158,7 +162,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # 运行
-pytest                         # 89 个测试
+pytest                         # 103 个测试
 ruff check src tests           # 代码检查
 ```
 
