@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mihomo_lite.core import net_tools
 from mihomo_lite.core.services import Services
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.models.proxy import ProxyGroup, ProxyNode
@@ -50,10 +51,16 @@ class ProxyPage(QWidget):
         header.addLayout(titles, 1)
         header.addStretch(1)
 
+        self._ip_button = QPushButton("Check IP")
+        self._ip_button.clicked.connect(self._check_ip)
+        self._speed_button = QPushButton("Speed test")
+        self._speed_button.clicked.connect(self._speed_test)
         self._refresh_button = QPushButton("Refresh")
         self._refresh_button.clicked.connect(lambda: self._services.proxy.refresh())
         self._delay_button = QPushButton("Test latency")
         self._delay_button.clicked.connect(self._test_delay)
+        header.addWidget(self._ip_button)
+        header.addWidget(self._speed_button)
         header.addWidget(self._refresh_button)
         header.addWidget(self._delay_button)
         root.addLayout(header)
@@ -161,6 +168,68 @@ class ProxyPage(QWidget):
             if member == group.now:
                 self._node_list.setCurrentItem(item)
 
+    def _proxy_server(self) -> str | None:
+        session = self._services.connection.session
+        return session.proxy_server if session is not None else None
+
+    def _check_ip(self) -> None:
+        if not self._services.connection.is_connected:
+            self._status.setText("Connect first.")
+            return
+        self._status.setText("Checking the public IP…")
+        self._services.runner.submit(
+            net_tools.fetch_public_ip,
+            args=(self._proxy_server(),),
+            on_success=lambda result: self._status.setText(
+                f"Public IP: {result.address}  ({result.source})"
+            ),
+            on_error=self._status.setText,
+        )
+
+    def _speed_test(self) -> None:
+        group = self._current_group()
+        item = self._node_list.currentItem()
+        api = self._services.connection.api
+        if group is None or item is None or api is None:
+            self._status.setText("Connect first and pick a node.")
+            return
+        if not group.is_selector:
+            self._status.setText("Speed test needs a Selector group.")
+            return
+        node = str(item.data(Qt.ItemDataRole.UserRole) or "")
+        if not node:
+            return
+        server = self._proxy_server()
+        previous = group.now
+        self._status.setText(f"Testing {node}…")
+
+        def restore() -> None:
+            if previous:
+                self._services.runner.submit(api.select_proxy, args=(group.name, previous))
+
+        def failed(message: str) -> None:
+            restore()
+            self._status.setText(message)
+
+        def measured(mbps: float) -> None:
+            restore()
+            self._status.setText(f"{node}: {mbps:.1f} Mbit/s")
+
+        def switched(_result: object) -> None:
+            self._services.runner.submit(
+                net_tools.measure_download,
+                args=(server,),
+                on_success=measured,
+                on_error=failed,
+            )
+
+        self._services.runner.submit(
+            api.select_proxy,
+            args=(group.name, node),
+            on_success=switched,
+            on_error=failed,
+        )
+
     def _filter_nodes(self, text: str) -> None:
         needle = text.strip().lower()
         for row in range(self._node_list.count()):
@@ -197,6 +266,8 @@ class ProxyPage(QWidget):
         connected = state is ConnectionState.CONNECTED
         self._refresh_button.setEnabled(connected)
         self._delay_button.setEnabled(connected)
+        self._ip_button.setEnabled(connected)
+        self._speed_button.setEnabled(connected)
         self._use_button.setEnabled(connected and (self._current_group() is not None))
         if not connected:
             self._group_list.clear()

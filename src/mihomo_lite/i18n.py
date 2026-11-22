@@ -55,6 +55,12 @@ ZH: dict[str, str] = {
     "Use selected node": "使用所选节点",
     "Connect first to load proxy groups.": "先连接才能加载代理组。",
     "Filter nodes…": "过滤节点…",
+    "Check IP": "检测 IP",
+    "Speed test": "测速",
+    "Connect first.": "请先连接。",
+    "Connect first and pick a node.": "请先连接并选择节点。",
+    "Speed test needs a Selector group.": "测速需要 Selector 策略组。",
+    "Checking the public IP…": "正在检测公网 IP…",
     "Connected first?": "先连接",
     # profiles
     "Imports stay untouched; a generated copy runs.": "导入的文件不会被改动，运行时使用生成的副本。",
