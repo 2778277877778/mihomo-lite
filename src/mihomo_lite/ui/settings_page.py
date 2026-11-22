@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from mihomo_lite.core.services import Services
+from mihomo_lite.i18n import tr
 from mihomo_lite.system import startup, wintun
 
 
@@ -170,13 +171,13 @@ class SettingsPage(QWidget):
         grid.addWidget(QLabel("Mixed port"), 5, 0)
         self._mixed_port = QSpinBox()
         self._mixed_port.setRange(0, 65535)
-        self._mixed_port.setSpecialValueText("Automatic")
+        self._mixed_port.setSpecialValueText(tr("Automatic"))
         grid.addWidget(self._mixed_port, 5, 1)
 
         grid.addWidget(QLabel("API port"), 6, 0)
         self._api_port = QSpinBox()
         self._api_port.setRange(0, 65535)
-        self._api_port.setSpecialValueText("Automatic")
+        self._api_port.setSpecialValueText(tr("Automatic"))
         grid.addWidget(self._api_port, 6, 1)
 
         grid.addWidget(QLabel("Bypass list"), 7, 0)
@@ -223,6 +224,12 @@ class SettingsPage(QWidget):
 
         self._start_connected = QCheckBox("Connect on launch")
         grid.addWidget(self._start_connected, 7, 0, 1, 2)
+
+        grid.addWidget(QLabel("Language"), 8, 0)
+        self._language = QComboBox()
+        self._language.addItem("English", "en")
+        self._language.addItem("中文", "zh")
+        grid.addWidget(self._language, 8, 1)
         grid.setColumnStretch(1, 1)
         layout.addLayout(grid)
         return card
@@ -250,6 +257,8 @@ class SettingsPage(QWidget):
         self._theme.setCurrentIndex(max(0, index))
         index = self._log_level.findData(settings.log_level)
         self._log_level.setCurrentIndex(max(0, index))
+        index = self._language.findData(settings.language)
+        self._language.setCurrentIndex(max(0, index))
         self._update_core_hint()
         self._update_wintun_hint()
 
@@ -272,7 +281,7 @@ class SettingsPage(QWidget):
             self._wintun_button.setEnabled(False)
             return
         if found is None:
-            self._wintun_hint.setText("wintun.dll not installed (required for TUN)")
+            self._wintun_hint.setText(tr("wintun.dll not installed (required for TUN)"))
             self._wintun_button.setEnabled(True)
         else:
             self._wintun_hint.setText(f"wintun.dll ready in {found.parent}")
@@ -314,7 +323,9 @@ class SettingsPage(QWidget):
             autostart_ok = False
             QMessageBox.warning(self, "Autostart", str(exc))
 
+        previous_language = self._services.settings.current.language
         settings = self._services.settings.update(
+            language=self._language.currentData(),
             core_path=self._core_path.text().strip(),
             system_proxy=self._system_proxy.isChecked(),
             tun_enabled=self._tun_enabled.isChecked(),
@@ -332,6 +343,14 @@ class SettingsPage(QWidget):
             theme=self._theme.currentData(),
             log_level=self._log_level.currentData(),
         )
+        if settings.language != previous_language:
+            QMessageBox.information(
+                self,
+                "Language",
+                "Language changed. Restart Mihomo Lite to apply it."
+                if settings.language == "en"
+                else "语言已更改，重启 Mihomo Lite 后生效。",
+            )
         self.theme_changed.emit(settings.theme)
         self._update_core_hint()
         self._update_wintun_hint()

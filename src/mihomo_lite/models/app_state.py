@@ -7,6 +7,7 @@ from enum import StrEnum
 from pydantic import BaseModel, field_validator
 
 from mihomo_lite.config.defaults import DEFAULT_BYPASS
+from mihomo_lite.i18n import tr
 
 
 class ConnectionState(StrEnum):
@@ -28,13 +29,15 @@ class ConnectionState(StrEnum):
 
     @property
     def label(self) -> str:
-        return {
-            ConnectionState.STOPPED: "Disconnected",
-            ConnectionState.STARTING: "Connecting…",
-            ConnectionState.CONNECTED: "Connected",
-            ConnectionState.STOPPING: "Disconnecting…",
-            ConnectionState.ERROR: "Error",
-        }[self]
+        return tr(
+            {
+                ConnectionState.STOPPED: "Disconnected",
+                ConnectionState.STARTING: "Connecting…",
+                ConnectionState.CONNECTED: "Connected",
+                ConnectionState.STOPPING: "Disconnecting…",
+                ConnectionState.ERROR: "Error",
+            }[self]
+        )
 
 
 class AppSettings(BaseModel):
@@ -42,6 +45,7 @@ class AppSettings(BaseModel):
 
     model_config = {"validate_assignment": True}
 
+    language: str = "en"
     theme: str = "dark"
     system_proxy: bool = True
     bypass: str = DEFAULT_BYPASS
@@ -63,6 +67,13 @@ class AppSettings(BaseModel):
     tun_dns_hijack: bool = True
     window_width: int = 980
     window_height: int = 660
+
+    @field_validator("language")
+    @classmethod
+    def _check_language(cls, value: str) -> str:
+        if value not in {"en", "zh"}:
+            raise ValueError("language must be 'en' or 'zh'")
+        return value
 
     @field_validator("theme")
     @classmethod

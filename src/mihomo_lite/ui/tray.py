@@ -7,6 +7,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 from mihomo_lite.core.services import Services
+from mihomo_lite.i18n import tr
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.ui.icon import tray_icon
 
@@ -22,11 +23,11 @@ class TrayController(QObject):
         self._icon.setToolTip("Mihomo Lite - disconnected")
 
         self._menu = QMenu()
-        self._toggle_action = QAction("Connect", self._menu)
+        self._toggle_action = QAction(tr("Connect"), self._menu)
         self._toggle_action.triggered.connect(self._toggle)
-        self._show_action = QAction("Show window", self._menu)
+        self._show_action = QAction(tr("Show window"), self._menu)
         self._show_action.triggered.connect(self.show_window)
-        self._quit_action = QAction("Quit", self._menu)
+        self._quit_action = QAction(tr("Quit"), self._menu)
         self._quit_action.triggered.connect(self.quit_requested.emit)
 
         self._menu.addAction(self._show_action)
@@ -77,9 +78,9 @@ class TrayController(QObject):
     def _on_state(self, state: ConnectionState) -> None:
         self._icon.setIcon(tray_icon(state))
         self._toggle_action.setText(
-            "Disconnect"
+            tr("Disconnect")
             if state in (ConnectionState.CONNECTED, ConnectionState.STARTING)
-            else "Connect"
+            else tr("Connect")
         )
         self._refresh_tooltip(state)
 
@@ -90,6 +91,6 @@ class TrayController(QObject):
         name = profile.name if profile else "no profile"
         self._icon.setToolTip(f"Mihomo Lite - {state.label} ({name})")
         if state is ConnectionState.CONNECTED:
-            self.notify("Mihomo Lite", "Connected. Traffic is now going through Mihomo.")
+            self.notify(tr("Mihomo Lite"), tr("Connected. Traffic is now going through Mihomo."))
         elif state is ConnectionState.ERROR:
-            self.notify("Mihomo Lite", "The connection failed. Open the app for details.")
+            self.notify(tr("Mihomo Lite"), tr("The connection failed. Open the app for details."))

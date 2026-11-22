@@ -24,8 +24,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mihomo_lite import __app_name__, __version__
+from mihomo_lite import __app_name__, __version__, i18n
 from mihomo_lite.core.services import Services
+from mihomo_lite.i18n import tr
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.system import elevation
 from mihomo_lite.ui import glass
@@ -302,6 +303,7 @@ class MainWindow(QMainWindow):
         page = self._factories[index]()
         if index == 3:  # SettingsPage emits theme changes
             page.theme_changed.connect(self.apply_theme)
+        i18n.translate_widget_tree(page)
         self._pages[index] = page
         self._stack.addWidget(page)
         return page
@@ -339,11 +341,11 @@ class MainWindow(QMainWindow):
         self._titlebar.set_state(state)
         self._status_label.setText(state.label)
         if state is ConnectionState.CONNECTED:
-            self._flash("Connected - traffic is going through Mihomo.")
+            self._flash(tr("Connected - traffic is going through Mihomo."))
         elif state is ConnectionState.STOPPED:
-            self._flash("Disconnected.")
+            self._flash(tr("Disconnected."))
         elif state is ConnectionState.ERROR:
-            self._flash("Connection error - see Logs for details.", 10000)
+            self._flash(tr("Connection error - see Logs for details."), 10000)
 
     def _on_error(self, message: str) -> None:
         log.error("%s", message)
@@ -357,13 +359,13 @@ class MainWindow(QMainWindow):
 
     def _on_elevation_required(self, message: str) -> None:
         if not elevation.is_windows():
-            QMessageBox.warning(self, "TUN mode", message)
+            QMessageBox.warning(self, tr("TUN mode"), message)
             self._dashboard.sync_state()
             return
         answer = QMessageBox.question(
             self,
-            "Administrator required",
-            message + "\n\nThe app will restart and connect again automatically.",
+            tr("Administrator required"),
+            message + "\n\n" + tr("The app will restart and connect again automatically."),
         )
         if answer != QMessageBox.StandardButton.Yes:
             self._dashboard.sync_state()
@@ -373,9 +375,11 @@ class MainWindow(QMainWindow):
     def elevation_failed(self) -> None:
         QMessageBox.warning(
             self,
-            "Restart failed",
-            "Mihomo Lite could not restart as administrator. "
-            "Start it manually with 'Run as administrator', or turn off TUN mode.",
+            tr("Restart failed"),
+            tr(
+                "Mihomo Lite could not restart as administrator. "
+                "Start it manually with 'Run as administrator', or turn off TUN mode."
+            ),
         )
         self._dashboard.sync_state()
 
@@ -437,8 +441,8 @@ class MainWindow(QMainWindow):
             event.ignore()
             self.hide()
             self._tray.notify(
-                "Mihomo Lite is still running",
-                "The proxy keeps working. Use the tray icon to reopen or quit.",
+                tr("Mihomo Lite is still running"),
+                tr("The proxy keeps working. Use the tray icon to reopen or quit."),
             )
             return
         event.accept()

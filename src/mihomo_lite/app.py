@@ -11,7 +11,7 @@ from pathlib import Path
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from mihomo_lite import __app_id__, __app_name__, __version__
+from mihomo_lite import __app_id__, __app_name__, __version__, i18n
 from mihomo_lite.core.connection_manager import ConnectionManager
 from mihomo_lite.core.profile_manager import ProfileManager
 from mihomo_lite.core.proxy_manager import ProxyManager
@@ -71,6 +71,7 @@ class MihomoLiteApp:
         self.single = SingleInstance(self.paths.instance_lock)
         self.settings = SettingsStore(self.paths)
         self.settings.load()
+        i18n.set_language(self.settings.current.language)
 
         self.runner = TaskRunner()
         self.profiles = ProfileManager(self.paths)
@@ -99,6 +100,7 @@ class MihomoLiteApp:
         )
         self.tray = TrayController(self.services)
         self.window = MainWindow(self.services, self.tray)
+        i18n.translate_widget_tree(self.window)
 
     def run(self) -> int:
         if self._args.selftest:
@@ -144,7 +146,7 @@ class MihomoLiteApp:
         if not hidden or not self.tray.available():
             self.window.show()
         else:
-            self.tray.notify(__app_name__, "Running in the background. Use the tray icon to open.")
+            self.tray.notify(__app_name__, i18n.tr("Running in the background. Use the tray icon to open."))
 
         self.updates.start()
         self.updates.active_profile_updated.connect(

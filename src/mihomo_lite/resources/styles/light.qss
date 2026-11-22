@@ -1,8 +1,10 @@
 /* Mihomo Lite - liquid glass (light) */
 QPushButton:focus, QComboBox:focus, QSpinBox:focus, QLineEdit:focus,
-QListWidget:focus, QCheckBox:focus {
+QCheckBox:focus {
     border: 1px solid #4f7bff;
 }
+QListWidget:focus { border: 1px solid #4f7bff; }
+QListWidget#Nav:focus { border: none; }
 
 QWidget {
     background: transparent;

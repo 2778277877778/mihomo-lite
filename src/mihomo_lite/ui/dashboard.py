@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from mihomo_lite.core.services import Services
 from mihomo_lite.core.traffic_monitor import TrafficSample, human_bytes, human_speed
+from mihomo_lite.i18n import tr
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.ui.widgets.log_view import LogView
 from mihomo_lite.ui.widgets.status import KeyValueRow, MetricTile, StatusPill
@@ -176,23 +177,25 @@ class DashboardPage(QWidget):
 
         self._action_button.setEnabled(not state.is_busy)
         self._action_button.setText(
-            "Disconnect" if state in (ConnectionState.CONNECTED, ConnectionState.STARTING) else "Connect"
+            tr("Disconnect")
+            if state in (ConnectionState.CONNECTED, ConnectionState.STARTING)
+            else tr("Connect")
         )
         if state is ConnectionState.STOPPED:
-            self._headline.setText("Disconnected")
-            self._headline_sub.setText("Traffic is going straight to the internet.")
+            self._headline.setText(tr("Disconnected"))
+            self._headline_sub.setText(tr("Traffic is going straight to the internet."))
         elif state is ConnectionState.STARTING:
-            self._headline.setText("Connecting…")
-            self._headline_sub.setText("Validating the profile and starting the core.")
+            self._headline.setText(tr("Connecting…"))
+            self._headline_sub.setText(tr("Validating the profile and starting the core."))
         elif state is ConnectionState.CONNECTED:
-            self._headline.setText("Connected")
-            self._headline_sub.setText("Your system proxy points at the local Mihomo instance.")
+            self._headline.setText(tr("Connected"))
+            self._headline_sub.setText(tr("Your system proxy points at the local Mihomo instance."))
         elif state is ConnectionState.STOPPING:
-            self._headline.setText("Disconnecting…")
-            self._headline_sub.setText("Restoring the previous system proxy.")
+            self._headline.setText(tr("Disconnecting…"))
+            self._headline_sub.setText(tr("Restoring the previous system proxy."))
         else:
-            self._headline.setText("Something went wrong")
-            self._headline_sub.setText("Open the Logs page for the exact reason.")
+            self._headline.setText(tr("Something went wrong"))
+            self._headline_sub.setText(tr("Open the Logs page for the exact reason."))
         self._refresh_session()
 
     def _refresh_session(self) -> None:
@@ -213,14 +216,14 @@ class DashboardPage(QWidget):
                 self._system_row.set_value(f"off  ·  up {uptime}")
         else:
             settings = self._services.settings.current
-            self._profile_row.set_value(profile.name if profile else "none selected")
-            self._core_row.set_value("not running")
+            self._profile_row.set_value(profile.name if profile else tr("none selected"))
+            self._core_row.set_value(tr("not running"))
             self._proxy_row.set_value("-")
             if settings.tun_enabled:
-                self._system_row.set_value("TUN mode (administrator required)")
+                self._system_row.set_value(tr("TUN mode (administrator required)"))
             else:
                 self._system_row.set_value(
-                    "will be enabled" if settings.system_proxy else "disabled"
+                    tr("will be enabled") if settings.system_proxy else tr("disabled")
                 )
 
     def _on_traffic(self, sample: TrafficSample) -> None:
