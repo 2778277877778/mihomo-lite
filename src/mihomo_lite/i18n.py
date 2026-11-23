@@ -66,6 +66,7 @@ ZH: dict[str, str] = {
     "Imports stay untouched; a generated copy runs.": "导入的文件不会被改动，运行时使用生成的副本。",
     "Update all": "全部更新",
     "Import YAML…": "导入 YAML…",
+    "Import QR…": "导入二维码…",
     "Add subscription…": "添加订阅…",
     "Update subscription": "更新订阅",
     "Delete": "删除",

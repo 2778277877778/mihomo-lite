@@ -27,6 +27,8 @@ dependencies = [
   "websockets>=14,<18",
   "PyYAML>=6.0,<7",
   "pydantic>=2.7,<3",
+  "zxing-cpp>=2.2,<3",
+  "Pillow>=10,<14",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +37,7 @@ dev = [
   "pytest-qt>=4.4",
   "ruff>=0.6",
   "pyinstaller>=6.6",
+  "qrcode>=7",
 ]
 
 [project.scripts]

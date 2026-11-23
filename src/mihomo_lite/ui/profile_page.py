@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from mihomo_lite.config.loader import load_yaml_file
 from mihomo_lite.config.rules import analyze_rules
+from mihomo_lite.core import qr
 from mihomo_lite.core.services import Services
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.models.profile import Profile, ProfileKind
@@ -65,8 +66,11 @@ class ProfilePage(QWidget):
         self._import_button.clicked.connect(self._import_file)
         self._subscribe_button = QPushButton("Add subscription…")
         self._subscribe_button.clicked.connect(self._add_subscription)
+        self._qr_button = QPushButton("Import QR…")
+        self._qr_button.clicked.connect(self._import_qr)
         header.addWidget(self._update_all_button)
         header.addWidget(self._import_button)
+        header.addWidget(self._qr_button)
         header.addWidget(self._subscribe_button)
         root.addLayout(header)
 
@@ -226,6 +230,46 @@ class ProfilePage(QWidget):
             on_error=self._show_error,
             on_finished=lambda: self._import_button.setEnabled(True),
         )
+
+    def _import_qr(self) -> None:
+        path, _filter = QFileDialog.getOpenFileName(
+            self,
+            "Import a QR code",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.webp);;All files (*)",
+        )
+        if not path:
+            return
+        self._qr_button.setEnabled(False)
+
+        def work() -> tuple[str, str]:
+            text = qr.decode_image(Path(path))
+            return qr.classify(text)
+
+        def decoded(result: object) -> None:
+            kind, payload = result  # type: ignore[misc]
+            if kind == "url":
+                self._services.runner.submit(
+                    self._services.profiles.import_subscription,
+                    args=(payload,),
+                    on_success=self._after_import,
+                    on_error=self._show_error,
+                    on_finished=lambda: self._qr_button.setEnabled(True),
+                )
+            else:
+                self._services.runner.submit(
+                    self._services.profiles.import_text,
+                    kwargs={"text": payload, "name": "QR import"},
+                    on_success=self._after_import,
+                    on_error=self._show_error,
+                    on_finished=lambda: self._qr_button.setEnabled(True),
+                )
+
+        def failed(message: str) -> None:
+            self._qr_button.setEnabled(True)
+            self._show_error(message)
+
+        self._services.runner.submit(work, on_success=decoded, on_error=failed)
 
     def _add_subscription(self) -> None:
         url, ok = QInputDialog.getText(
