@@ -18,6 +18,7 @@ htmlcov/
 runtime/*.yaml
 runtime/*.log
 runtime/*.exe
+runtime/*.dll
 profiles/
 *.journal.json
 
@@ -29,6 +30,7 @@ tools/core/
 tools/venv-essentials/
 tools/smoke/*.log
 tools/smoke/*.png
+tools/smoke/*.zip
 tools/smoke/manual/
 packaging/output/
 

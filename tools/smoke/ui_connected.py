@@ -3,6 +3,7 @@
 A real Mihomo core is started and stopped; the user's Windows proxy is never touched.
 """
 
+import logging
 import os
 import shutil
 import sys
@@ -78,6 +79,14 @@ def main() -> int:
     while time.monotonic() < end and app.connection.state is not ConnectionState.CONNECTED:
         spin(0.1)
     spin(1.5)
+
+    # Screenshots go into a public repository: drop log lines that contain
+    # local user names and temp paths, keep one sanitised line.
+    from mihomo_lite.utils.logger import get_ring_buffer
+
+    get_ring_buffer().clear()
+    logging.getLogger("mihomo_lite").info("Connected. Log lines redacted for this screenshot.")
+    spin(0.6)
 
     out = ROOT / "docs" / "images"
     out.mkdir(parents=True, exist_ok=True)

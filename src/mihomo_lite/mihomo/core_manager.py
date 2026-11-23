@@ -18,10 +18,11 @@ from pathlib import Path
 
 import httpx
 
-from mihomo_lite.config.defaults import CORE_ASSET_NAME, CORE_DOWNLOAD_URL
+from mihomo_lite.config.defaults import CORE_ASSET_NAME, CORE_DOWNLOAD_URL, CORE_SHA256
 from mihomo_lite.mihomo.health import check_core_binary
 from mihomo_lite.system.paths import PACKAGE_ROOT, AppPaths, executable_dir, is_frozen
-from mihomo_lite.utils.exceptions import CoreDownloadError, CoreNotFoundError
+from mihomo_lite.utils.exceptions import CoreDownloadError, CoreNotFoundError, IntegrityError
+from mihomo_lite.utils.integrity import verify_sha256
 
 log = logging.getLogger(__name__)
 
@@ -141,6 +142,10 @@ class CoreManager:
                 self._download_archive(archive, progress)
             except httpx.HTTPError as exc:
                 raise CoreDownloadError(f"download failed: {exc}") from exc
+            try:
+                verify_sha256(archive, CORE_SHA256, label="Mihomo core archive")
+            except IntegrityError as exc:
+                raise CoreDownloadError(str(exc)) from exc
 
             try:
                 with zipfile.ZipFile(archive) as zf:

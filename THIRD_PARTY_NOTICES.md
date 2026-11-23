@@ -20,12 +20,14 @@ components; their licenses apply to those components, not to the application cod
 The application communicates with the core as a separate process over a loopback HTTP
 API; the two are distributed together as an aggregate and are not linked into one program.
 
-## Wintun (optional, downloaded at runtime)
+## Wintun (bundled binary)
 
 - Project: https://www.wintun.net
-- License: GPL-2.0 (see the upstream distribution)
-- Not bundled with Mihomo Lite. When the user enables TUN mode, Settings can download the
-  official build and place wintun.dll next to the core; it is used by Mihomo as a driver.
+- Version bundled at build time: 0.14.1 (unmodified, SHA-256 verified by the build)
+- License: GNU General Public License v2.0 (full text in licenses/wintun-GPL-2.0.txt)
+- The DLL is placed next to the Mihomo core (runtime/wintun.dll) and loaded by the core when
+  TUN mode is enabled. It is redistributed unmodified; the corresponding source is available
+  from the upstream project at https://www.wintun.net/.
 
 ## PySide6 / Qt
 

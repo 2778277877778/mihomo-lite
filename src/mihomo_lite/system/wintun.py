@@ -17,13 +17,16 @@ from pathlib import Path
 
 import httpx
 
-from mihomo_lite.utils.exceptions import MihomoLiteError
+from mihomo_lite.utils.exceptions import IntegrityError, MihomoLiteError
+from mihomo_lite.utils.integrity import verify_sha256
 
 log = logging.getLogger(__name__)
 
 WINTUN_VERSION = "0.14.1"
 WINTUN_URL = f"https://www.wintun.net/builds/wintun-{WINTUN_VERSION}.zip"
 WINTUN_MEMBER = "bin/amd64/wintun.dll"
+# SHA-256 of the official wintun-0.14.1.zip archive.
+WINTUN_SHA256 = "07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51"
 MIN_DLL_BYTES = 64 * 1024
 
 ProgressCallback = Callable[[int, int], None]
@@ -74,6 +77,11 @@ def install(core_path: Path, *, progress: ProgressCallback | None = None) -> Pat
                             progress(done, total)
         except httpx.HTTPError as exc:
             raise WintunError(f"download failed: {exc}") from exc
+
+        try:
+            verify_sha256(archive, WINTUN_SHA256, label="wintun archive")
+        except IntegrityError as exc:
+            raise WintunError(str(exc)) from exc
 
         try:
             with zipfile.ZipFile(archive) as zf:

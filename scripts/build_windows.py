@@ -34,7 +34,9 @@ from mihomo_lite.config.defaults import (  # noqa: E402
     CORE_ASSET_NAME,
     CORE_DOWNLOAD_URL,
     CORE_RELEASE_TAG,
+    CORE_SHA256,
 )
+from mihomo_lite.utils.integrity import verify_sha256  # noqa: E402
 
 
 def _run(command: list[str], *, cwd: Path = ROOT) -> int:
@@ -65,9 +67,16 @@ def ensure_local_core() -> Path:
 
     CORE_CACHE.mkdir(parents=True, exist_ok=True)
     archive = CORE_CACHE / "mihomo.zip"
+    if archive.exists():
+        try:
+            verify_sha256(archive, CORE_SHA256, label="cached core archive")
+        except Exception:  # noqa: BLE001 - stale cache is simply replaced
+            print("cached core archive fails its checksum; downloading again")
+            archive.unlink(missing_ok=True)
     if not archive.exists():
         print(f"downloading {CORE_DOWNLOAD_URL}")
         urllib.request.urlretrieve(CORE_DOWNLOAD_URL, archive)  # noqa: S310 - pinned https URL
+        verify_sha256(archive, CORE_SHA256, label="core archive")
 
     with zipfile.ZipFile(archive) as zf:
         members = [n for n in zf.namelist() if n.lower().endswith(".exe")]

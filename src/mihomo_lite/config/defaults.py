@@ -37,3 +37,5 @@ CORE_DOWNLOAD_URL = (
     f"{CORE_RELEASE_TAG}/mihomo-windows-amd64-{CORE_RELEASE_TAG}.zip"
 )
 CORE_ASSET_NAME = "mihomo-windows-amd64.exe"
+# SHA-256 of the pinned release archive above; verified after every download.
+CORE_SHA256 = "6ab2180875f9f6fff8b19386d760daec257f66b45f72b3afc650634272fa837a"

@@ -35,5 +35,9 @@ class ProxyError(MihomoLiteError):
     """Applying or restoring the Windows system proxy failed."""
 
 
+class IntegrityError(MihomoLiteError):
+    """A downloaded file does not match its expected checksum."""
+
+
 class StateError(MihomoLiteError):
     """An operation was requested while the connection was in the wrong state."""
