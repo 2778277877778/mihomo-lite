@@ -28,6 +28,7 @@ from mihomo_lite.system.single_instance import SingleInstance
 from mihomo_lite.ui.icon import app_icon
 from mihomo_lite.ui.main_window import MainWindow
 from mihomo_lite.ui.tray import TrayController
+from mihomo_lite.ui.widgets.wheel_guard import install_wheel_guard
 from mihomo_lite.utils.logger import setup_logging
 from mihomo_lite.utils.tasks import TaskRunner
 
@@ -59,6 +60,7 @@ class MihomoLiteApp:
         self.qt.setApplicationVersion(__version__)
         self.qt.setWindowIcon(app_icon())
         self.qt.setQuitOnLastWindowClosed(False)
+        install_wheel_guard(self.qt)
 
         self.paths = app_paths()
         setup_logging(
