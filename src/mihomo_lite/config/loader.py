@@ -97,6 +97,15 @@ def _try_base64(text: str) -> str | None:
         return None
 
 
+def looks_like_link_subscription(text: str) -> bool:
+    """True when the payload is a v2ray/ss link list (raw or base64 wrapped)."""
+    stripped = text.strip()
+    if _looks_like_links(stripped):
+        return True
+    decoded = _try_base64(stripped)
+    return bool(decoded and _looks_like_links(decoded))
+
+
 def load_yaml_text(text: str, *, source: str = "subscription") -> dict[str, Any]:
     text = text.strip()
     if not text:

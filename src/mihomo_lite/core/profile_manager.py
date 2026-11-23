@@ -18,7 +18,12 @@ import httpx
 from PySide6.QtCore import QObject, Signal
 
 from mihomo_lite.config.defaults import ALLOWED_PROFILE_SUFFIXES, MAX_PROFILE_BYTES
-from mihomo_lite.config.loader import load_yaml_file, load_yaml_text, parse_yaml
+from mihomo_lite.config.loader import (
+    load_yaml_file,
+    load_yaml_text,
+    looks_like_link_subscription,
+    parse_yaml,
+)
 from mihomo_lite.config.validator import validate_config
 from mihomo_lite.models.profile import Profile, ProfileKind
 from mihomo_lite.system.paths import AppPaths
@@ -28,19 +33,23 @@ from mihomo_lite.utils.logger import redact_url
 
 log = logging.getLogger(__name__)
 
-_HEADERS = {"User-Agent": "MihomoLite/0.1 (+https://github.com/)"}
+# Providers decide the payload format from the User-Agent: Clash-style agents get
+# YAML, everything else often gets a base64 link list. Try the common ones first.
+_USER_AGENTS = (
+    "clash-verge/v2.0.0",
+    "ClashMetaForAndroid/2.11.1.Meta",
+    "mihomo/1.19.33",
+    "MihomoLite/0.3.0 (+https://github.com/2778277877778/mihomo-lite)",
+)
 
 
-def fetch_subscription(url: str, *, timeout: float = 25.0) -> str:
-    """Download a subscription without going through the system proxy."""
-    if not url.lower().startswith(("http://", "https://")):
-        raise ConfigError("subscription URL must start with http:// or https://")
+def _download_text(url: str, user_agent: str, timeout: float) -> str:
     chunks: list[bytes] = []
     try:
         with httpx.Client(
             follow_redirects=True,
             timeout=timeout,
-            headers=_HEADERS,
+            headers={"User-Agent": user_agent},
             trust_env=False,
         ) as client, client.stream("GET", url) as response:
             if response.status_code >= 400:
@@ -61,6 +70,39 @@ def fetch_subscription(url: str, *, timeout: float = 25.0) -> str:
         except UnicodeDecodeError:
             continue
     raise ConfigError("subscription is not valid UTF-8 text")
+
+
+def fetch_subscription(url: str, *, timeout: float = 25.0) -> str:
+    """Download a subscription, asking for Clash YAML with Clash-style agents."""
+    if not url.lower().startswith(("http://", "https://")):
+        raise ConfigError("subscription URL must start with http:// or https://")
+
+    last_error: ConfigError | None = None
+    for user_agent in _USER_AGENTS:
+        try:
+            text = _download_text(url, user_agent, timeout)
+        except ConfigError as exc:
+            last_error = exc
+            continue
+
+        stripped = text.strip()
+        if looks_like_link_subscription(stripped):
+            last_error = ConfigError(
+                "the provider returned a v2ray/ss link list for every Clash User-Agent. "
+                "Use the Clash subscription address from your provider "
+                "(often with &flag=clash or a /clash path)."
+            )
+            continue
+        if stripped.startswith("<"):
+            last_error = ConfigError(
+                "the link returned HTML (expired link, login wall or Cloudflare challenge)"
+            )
+            continue
+        return text
+
+    if last_error is not None:
+        raise ConfigError(f"{url.split('/')[2]}: {last_error}")
+    raise ConfigError("cannot download the subscription")
 
 
 class ProfileManager(QObject):
