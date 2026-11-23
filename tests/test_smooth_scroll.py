@@ -1,27 +1,18 @@
+import pytest
+
 from mihomo_lite.ui.widgets.smooth_scroll import SmoothScroller
 
 
-class Bar:
-    def singleStep(self) -> int:
-        return 16
+def test_wheel_notch_converts_to_velocity():
+    assert SmoothScroller._velocity_from(120, 0) == pytest.approx(5.0)
+    assert SmoothScroller._velocity_from(-120, 0) == pytest.approx(-5.0)
+    assert SmoothScroller._velocity_from(240, 0) == pytest.approx(10.0)
 
 
-def test_pixel_delta_wins():
-    assert SmoothScroller._wheel_step(24, 0, Bar()) == 24
+def test_trackpad_pixels_are_gain_scaled():
+    assert SmoothScroller._velocity_from(0, 40) == pytest.approx(3.2)
+    assert SmoothScroller._velocity_from(0, -40) == pytest.approx(-3.2)
 
 
-def test_angle_delta_maps_to_lines():
-    assert SmoothScroller._wheel_step(0, 120, Bar()) == 48
-    assert SmoothScroller._wheel_step(0, -120, Bar()) == -48
-
-
-def test_no_delta_is_zero():
-    assert SmoothScroller._wheel_step(0, 0, Bar()) == 0
-
-
-def test_small_single_step_is_raised():
-    class Small:
-        def singleStep(self) -> int:
-            return 2
-
-    assert SmoothScroller._wheel_step(0, 120, Small()) == 48
+def test_no_delta_means_no_motion():
+    assert SmoothScroller._velocity_from(0, 0) == 0.0

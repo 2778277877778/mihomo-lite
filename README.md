@@ -51,7 +51,7 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 - Tray icon, start-with-Windows, single-instance guard, connect on launch
 - Log copy/export with secrets redacted, and a live node filter
 - English / 中文 interface switch, public IP check and per-node speed test
-- Animated smooth wheel scrolling in lists/settings, and instant node selection feedback
+- macOS-style momentum (inertial) scrolling in lists/settings, and instant node selection feedback
 
 ### Install
 
@@ -160,7 +160,7 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 - 托盘常驻、开机自启、单实例保护、启动即连接
 - 日志一键复制/导出（自动脱敏），节点列表实时过滤
 - 中英文界面切换、公网 IP 检测、节点测速
-- 列表与设置页的平滑滚动动画，节点切换即时高亮反馈
+- 类 macOS 的惯性滚动（松手后继续滑行并缓停），节点切换即时高亮反馈
 
 ### 安装
 
