@@ -123,6 +123,22 @@ QPushButton#Primary:disabled {
     color: rgba(255, 255, 255, 0.75);
 }
 
+QPushButton#Chip {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(16, 21, 33, 0.07);
+    border-radius: 14px;
+    padding: 6px 14px;
+    min-height: 18px;
+    color: #101521;
+}
+QPushButton#Chip:hover { border-color: #4f7bff; }
+QPushButton#Chip:checked {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4f7bff, stop:1 #7b6bff);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    font-weight: 600;
+}
+
 QPushButton#Danger { color: #d64550; border-color: rgba(214, 69, 80, 0.20); }
 QPushButton#Danger:hover { background: rgba(255, 95, 109, 0.14); }
 

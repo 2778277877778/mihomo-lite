@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import time
 
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -22,6 +23,7 @@ from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.ui.widgets.log_view import LogView
 from mihomo_lite.ui.widgets.status import KeyValueRow, MetricTile, StatusPill
 from mihomo_lite.ui.widgets.toggle import ToggleSwitch
+from mihomo_lite.utils.net import local_ip
 
 
 class DashboardPage(QWidget):
@@ -36,6 +38,10 @@ class DashboardPage(QWidget):
         services.connection.state_changed.connect(self._on_state)
         services.connection.session_changed.connect(lambda _s: self._refresh_session())
         services.traffic.sample.connect(self._on_traffic)
+        services.proxy.groups_updated.connect(lambda _g, _n: self._refresh_current_node())
+        services.proxy.node_stats.connect(self._on_node_stats)
+        services.proxy.mode_changed.connect(self._sync_mode)
+        services.connection.state_changed.connect(self._on_mode_state)
         services.profiles.profiles_changed.connect(self._refresh_session)
         services.profiles.active_changed.connect(lambda _p: self._refresh_session())
 
@@ -43,6 +49,13 @@ class DashboardPage(QWidget):
         self._uptime_timer.setInterval(1000)
         self._uptime_timer.timeout.connect(self._refresh_uptime)
         self._uptime_timer.start()
+
+        # Periodic latency/jitter sampling for the node shown on the dashboard.
+        self._delay_timer = QTimer(self)
+        self._delay_timer.setInterval(20000)
+        self._delay_timer.timeout.connect(self._probe_current_node)
+        self._delay_timer.start()
+        QTimer.singleShot(3000, self._probe_current_node)
 
         self._on_state(services.connection.state)
         self._refresh_session()
@@ -69,6 +82,7 @@ class DashboardPage(QWidget):
         root.addLayout(header)
 
         root.addWidget(self._build_connection_card())
+        root.addWidget(self._build_mode_bar())
         root.addLayout(self._build_metrics())
         root.addWidget(self._build_details_card())
         root.addWidget(self._build_log_card(), 1)
@@ -102,6 +116,32 @@ class DashboardPage(QWidget):
         layout.addWidget(self._action_button)
         return card
 
+    def _build_mode_bar(self) -> QWidget:
+        bar = QWidget()
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setSpacing(6)
+        heading = QLabel("Outbound mode")
+        heading.setObjectName("Hint")
+        layout.addWidget(heading)
+
+        self._mode_buttons: dict[str, QPushButton] = {}
+        self._mode_group = QButtonGroup(self)
+        self._mode_group.setExclusive(True)
+        for label, mode in (("Rule", "rule"), ("Global", "global"), ("Direct", "direct")):
+            button = QPushButton(label)
+            button.setObjectName("Chip")
+            button.setCheckable(True)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setMinimumWidth(78)
+            button.setEnabled(False)
+            self._mode_group.addButton(button)
+            self._mode_buttons[mode] = button
+            layout.addWidget(button)
+            button.clicked.connect(lambda _checked=False, m=mode: self._set_mode(m))
+        layout.addStretch(1)
+        return bar
+
     def _build_metrics(self) -> QGridLayout:
         grid = QGridLayout()
         grid.setSpacing(12)
@@ -124,10 +164,17 @@ class DashboardPage(QWidget):
         layout.setContentsMargins(20, 12, 20, 12)
         layout.setSpacing(1)
         self._profile_row = KeyValueRow("Profile")
-        self._core_row = KeyValueRow("Mihomo core")
-        self._proxy_row = KeyValueRow("Local endpoints")
-        self._system_row = KeyValueRow("System proxy")
-        for row in (self._profile_row, self._core_row, self._proxy_row, self._system_row):
+        self._node_row = KeyValueRow("Current node")
+        self._latency_row = KeyValueRow("Latency")
+        self._usage_row = KeyValueRow("Session usage")
+        self._lan_row = KeyValueRow("LAN IP")
+        for row in (
+            self._profile_row,
+            self._node_row,
+            self._latency_row,
+            self._usage_row,
+            self._lan_row,
+        ):
             layout.addWidget(row)
         return card
 
@@ -143,7 +190,7 @@ class DashboardPage(QWidget):
         header.addStretch(1)
         layout.addLayout(header)
         self._log = LogView(self)
-        self._log.setMinimumHeight(70)
+        self._log.setMinimumHeight(42)
         layout.addWidget(self._log)
         return card
 
@@ -201,30 +248,68 @@ class DashboardPage(QWidget):
     def _refresh_session(self) -> None:
         session = self._services.connection.session
         profile = self._services.profiles.active_profile()
-        uptime = self._uptime_text()
         if session is not None:
-            self._profile_row.set_value(session.profile_name)
-            self._core_row.set_value(session.core_version or "running")
-            self._proxy_row.set_value(
-                f"127.0.0.1:{session.mixed_port}  ·  API {session.api_port}"
-            )
-            if session.mode == "tun":
-                self._system_row.set_value(f"TUN mode  ·  up {uptime}")
-            elif session.mode == "system":
-                self._system_row.set_value(f"system proxy  ·  up {uptime}")
-            else:
-                self._system_row.set_value(f"off  ·  up {uptime}")
+            self._profile_row.set_value(f"{session.profile_name}  ·  up {self._uptime_text()}")
+            self._lan_row.set_value(local_ip())
+            self._refresh_current_node()
         else:
-            settings = self._services.settings.current
             self._profile_row.set_value(profile.name if profile else tr("none selected"))
-            self._core_row.set_value(tr("not running"))
-            self._proxy_row.set_value("-")
-            if settings.tun_enabled:
-                self._system_row.set_value(tr("TUN mode (administrator required)"))
-            else:
-                self._system_row.set_value(
-                    tr("will be enabled") if settings.system_proxy else tr("disabled")
-                )
+            self._node_row.set_value("-")
+            self._latency_row.set_value("-")
+            self._usage_row.set_value("-")
+            self._lan_row.set_value(local_ip())
+
+    def _current_group(self):
+        for group in self._services.proxy.groups:
+            if group.name != "GLOBAL" and group.now:
+                return group
+        for group in self._services.proxy.groups:
+            if group.now:
+                return group
+        return None
+
+    def _refresh_current_node(self) -> None:
+        group = self._current_group()
+        if group is None:
+            self._node_row.set_value("-")
+            self._latency_row.set_value("-")
+            return
+        self._node_row.set_value(f"{group.now}  ({group.name})")
+        stats = self._services.proxy.stats.get(group.now, {})
+        delay = stats.get("delay")
+        jitter = stats.get("jitter")
+        if delay is None:
+            self._latency_row.set_value("-")
+        elif jitter:
+            self._latency_row.set_value(f"{delay} ms  ±{jitter} ms")
+        else:
+            self._latency_row.set_value(f"{delay} ms")
+
+    def _on_node_stats(self, _stats: object) -> None:
+        self._refresh_current_node()
+
+    def _probe_current_node(self) -> None:
+        if not self._services.connection.is_connected:
+            return
+        group = self._current_group()
+        if group is not None and group.now:
+            self._services.proxy.test_node_delay(group.now)
+
+    def _set_mode(self, mode: str) -> None:
+        if self._services.connection.is_connected:
+            self._services.proxy.set_mode(mode)
+
+    def _sync_mode(self, mode: str) -> None:
+        button = self._mode_buttons.get(mode)
+        if button is not None and not button.isChecked():
+            button.setChecked(True)
+
+    def _on_mode_state(self, state: ConnectionState) -> None:
+        for button in self._mode_buttons.values():
+            button.setEnabled(state is ConnectionState.CONNECTED)
+        if state is ConnectionState.CONNECTED:
+            self._services.proxy.refresh()
+            self._services.proxy.load_config()
 
     def _on_traffic(self, sample: TrafficSample) -> None:
         self._last_sample = sample
@@ -232,6 +317,9 @@ class DashboardPage(QWidget):
         self._up_tile.set_value(human_speed(sample.up))
         self._total_down.set_value(human_bytes(sample.down_total))
         self._total_up.set_value(human_bytes(sample.up_total))
+        if self._services.connection.session is not None:
+            total = sample.down_total + sample.up_total
+            self._usage_row.set_value(human_bytes(total))
 
     def _uptime_text(self) -> str:
         session = self._services.connection.session

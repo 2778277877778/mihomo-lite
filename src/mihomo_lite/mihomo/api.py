@@ -121,6 +121,12 @@ class MihomoAPI:
                     continue
         return result
 
+    def set_mode(self, mode: str) -> None:
+        mode = mode.lower()
+        if mode not in {"rule", "global", "direct"}:
+            raise ApiError(f"unsupported outbound mode: {mode}")
+        self._request("PATCH", "/configs", json={"mode": mode})
+
     def close_connections(self) -> None:
         self._request("DELETE", "/connections")
 
