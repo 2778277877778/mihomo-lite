@@ -83,6 +83,14 @@ def test_runtime_config_forces_local_safe_values(sample_profile):
     assert data["profile"]["store-selected"] is True
 
 
+def test_generator_moves_dns_listen_to_a_free_port(sample_profile):
+    sample_profile["dns"] = {"enable": True, "listen": "127.0.0.1:53"}
+    generated = generate_runtime_config(
+        sample_profile, mixed_port=1, api_port=2, secret="x", dns_port=25353
+    )
+    assert generated.data["dns"]["listen"] == "127.0.0.1:25353"
+
+
 def test_generator_does_not_mutate_the_original(sample_profile):
     before = dict(sample_profile)
     generate_runtime_config(sample_profile, mixed_port=1, api_port=2, secret="x")

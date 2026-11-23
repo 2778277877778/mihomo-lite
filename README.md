@@ -33,6 +33,7 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 
 - Ships with a verified, unmodified Mihomo core (GPL-3.0) and wintun.dll - offline after install
 - Downloads are pinned and SHA-256 verified (core, wintun); GitHub Actions are pinned by commit
+- Adaptive ports: a busy port is retried automatically (up to 3 attempts) with fresh ports
 - Local YAML, subscription URL and QR-code import, with backup and validation
 - Routing rule checks before connecting: unknown policies, rules after MATCH, missing
   no-resolve, duplicate rules and undefined rule-providers are reported with line numbers
@@ -135,6 +136,7 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 
 - 内置经过校验的 Mihomo 内核（GPL-3.0）和 wintun.dll，装完即可离线使用
 - 下载物固定版本并做 SHA-256 校验；GitHub Actions 按 commit 固定
+- 端口自适应：端口被占用时自动换端口重试（最多 3 次），DNS 监听端口也自动避让
 - 本地 YAML、订阅链接、二维码图片导入（先备份、再校验、后替换）
 - 连接前检查路由规则：策略名拼错、MATCH 之后还有规则、IP 规则缺 no-resolve、
   重复规则、未定义的 rule-provider，都会按行号提示

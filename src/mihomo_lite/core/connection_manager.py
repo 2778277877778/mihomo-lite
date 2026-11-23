@@ -105,6 +105,8 @@ class ConnectionManager(QObject):
         self._generation = 0
         self._stop_reason: str | None = None
         self._mode = "system"
+        self._connect_attempts = 0
+        self._max_connect_attempts = 3
         self._recent_output: deque[str] = deque(maxlen=300)
 
         self._process.started.connect(self._on_core_started)
@@ -162,12 +164,17 @@ class ConnectionManager(QObject):
 
     # -- connect -----------------------------------------------------------
     def connect(self) -> None:
+        self._connect_attempts = 0
+        self._begin_connect()
+
+    def _begin_connect(self) -> None:
         if self._state in (
             ConnectionState.STARTING,
             ConnectionState.CONNECTED,
             ConnectionState.STOPPING,
         ):
             return
+        self._connect_attempts += 1
 
         self._generation += 1
         token = self._generation
@@ -200,6 +207,11 @@ class ConnectionManager(QObject):
 
             mixed_port = find_free_port(settings.mixed_port)
             api_port = find_free_port(settings.api_port, avoid={mixed_port})
+            dns_port = (
+                find_free_port(0, avoid={mixed_port, api_port})
+                if isinstance(data.get("dns"), dict)
+                else None
+            )
             secret = secrets.token_urlsafe(24)
             register_secret(secret)
             generated = generate_runtime_config(
@@ -212,6 +224,7 @@ class ConnectionManager(QObject):
                 tun=use_tun,
                 tun_stack=settings.tun_stack,
                 tun_dns_hijack=settings.tun_dns_hijack,
+                dns_port=dns_port,
             )
             write_runtime_config(self._paths.runtime_config, generated)
             for note in generated.notes:
@@ -442,6 +455,22 @@ class ConnectionManager(QObject):
         if self._state is ConnectionState.STOPPING:
             self._finish_stop()
             return
+        if (
+            self._state is ConnectionState.STARTING
+            and self._stop_reason is None
+            and exit_code != 0
+            and self._connect_attempts < self._max_connect_attempts
+        ):
+            log.warning(
+                "core exited during startup (attempt %s/%s); retrying with fresh ports",
+                self._connect_attempts,
+                self._max_connect_attempts,
+            )
+            self._close_api()
+            self._set_state(ConnectionState.STOPPED)
+            QTimer.singleShot(500, self._begin_connect)
+            return
+
         if self._state in (ConnectionState.STARTING, ConnectionState.CONNECTED):
             self._stop_reason = "crash"
             self._teardown()

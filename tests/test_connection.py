@@ -189,6 +189,20 @@ def test_api_timeout_leaves_error_and_stops_core(harness, qtbot, monkeypatch):
     assert connection.session is None
 
 
+def test_core_startup_crash_retries_with_fresh_ports(harness, qtbot):
+    connection, process, _api, _traffic, backend, _events, _settings = harness
+    connection.connect()
+    qtbot.waitUntil(lambda: process.started_calls == 1, timeout=3000)
+
+    process.running = False
+    process.stopped.emit(1, True)
+
+    qtbot.waitUntil(lambda: process.started_calls == 2, timeout=5000)
+    wait_connected(qtbot, connection)
+    assert connection._connect_attempts == 2
+    assert backend.state.enabled
+
+
 def test_disconnect_restores_proxy_before_stopping_core(harness, qtbot):
     connection, process, _api, _traffic, backend, events, _settings = harness
     connection.connect()

@@ -49,6 +49,7 @@ def generate_runtime_config(
     tun: bool = False,
     tun_stack: str = "mixed",
     tun_dns_hijack: bool = True,
+    dns_port: int | None = None,
 ) -> GeneratedConfig:
     """Return a hardened copy of *profile* ready for the core to load."""
     if not isinstance(profile, dict):
@@ -125,8 +126,13 @@ def generate_runtime_config(
     profile_section.setdefault("store-fake-ip", True)
     data["profile"] = profile_section
 
-    if "dns" in data:
-        data["dns"] = _local_dns(data["dns"])
+    if isinstance(data.get("dns"), dict):
+        dns = dict(data["dns"])
+        if dns_port and dns.get("listen"):
+            # A fixed DNS listen port is a common startup failure: use a free one.
+            dns["listen"] = f"127.0.0.1:{dns_port}"
+            notes.append(f"DNS listen bound to a free port: {dns_port}")
+        data["dns"] = _local_dns(dns)
 
     if system_proxy:
         notes.append(f"system proxy target: 127.0.0.1:{mixed_port}")
