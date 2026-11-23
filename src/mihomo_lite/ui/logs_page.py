@@ -62,7 +62,9 @@ class LogsPage(QWidget):
 
     def _all_text(self) -> str:
         # The ring buffer already passed through SecretFilter.
-        return "\n".join(text for _level, _name, text in get_ring_buffer().snapshot())
+        return "\n".join(
+            text for _seq, _level, _name, text in get_ring_buffer().snapshot()
+        )
 
     def _copy(self) -> None:
         QApplication.clipboard().setText(self._all_text())

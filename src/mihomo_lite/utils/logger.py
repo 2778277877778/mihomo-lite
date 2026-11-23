@@ -11,7 +11,7 @@ from threading import Lock
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
 _DATE_FORMAT = "%H:%M:%S"
-_MAX_RECORDS = 2000
+_MAX_RECORDS = 5000
 
 _secrets: set[str] = set()
 _secrets_lock = Lock()
@@ -65,8 +65,11 @@ class RingBufferHandler(logging.Handler):
 
     def __init__(self, capacity: int = _MAX_RECORDS) -> None:
         super().__init__()
-        self._records: deque[tuple[int, str, str]] = deque(maxlen=capacity)
+        # (sequence, levelno, levelname, text) - the sequence lets consumers keep
+        # reading correctly even after the deque starts evicting old records.
+        self._records: deque[tuple[int, int, str, str]] = deque(maxlen=capacity)
         self._lock = Lock()
+        self._next_seq = 1
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
@@ -74,11 +77,17 @@ class RingBufferHandler(logging.Handler):
         except Exception:
             return
         with self._lock:
-            self._records.append((record.levelno, record.levelname, text))
+            self._records.append((self._next_seq, record.levelno, record.levelname, text))
+            self._next_seq += 1
 
-    def snapshot(self) -> list[tuple[int, str, str]]:
+    def snapshot(self) -> list[tuple[int, int, str, str]]:
         with self._lock:
             return list(self._records)
+
+    @property
+    def last_seq(self) -> int:
+        with self._lock:
+            return self._next_seq - 1
 
     def clear(self) -> None:
         with self._lock:
