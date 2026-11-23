@@ -69,6 +69,7 @@ class ProxyPage(QWidget):
         splitter.setChildrenCollapsible(False)
 
         self._group_list = QListWidget()
+        self._group_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._group_list.setMinimumWidth(230)
         self._group_list.currentRowChanged.connect(self._on_group_selected)
         splitter.addWidget(self._group_list)
@@ -88,6 +89,7 @@ class ProxyPage(QWidget):
         right_layout.addWidget(self._node_filter)
 
         self._node_list = QListWidget()
+        self._node_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._node_list.itemDoubleClicked.connect(self._activate_item)
         right_layout.addWidget(self._node_list, 1)
 

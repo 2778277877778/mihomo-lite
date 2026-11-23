@@ -75,6 +75,7 @@ class ProfilePage(QWidget):
         root.addLayout(header)
 
         self._list = QListWidget()
+        self._list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._list.currentRowChanged.connect(self._on_selection)
         self._list.itemDoubleClicked.connect(lambda _i: self._activate())
         root.addWidget(self._list, 1)

@@ -227,6 +227,8 @@ class MainWindow(QMainWindow):
 
         self._nav = QListWidget()
         self._nav.setObjectName("Nav")
+        # Sidebar selection is styled; native focus rectangles look like black frames.
+        self._nav.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._nav.setFrameShape(QFrame.Shape.NoFrame)
         self._nav.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._nav.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
