@@ -21,6 +21,7 @@ from mihomo_lite.core.services import Services
 from mihomo_lite.i18n import tr
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.models.proxy import ProxyGroup, ProxyNode
+from mihomo_lite.ui.widgets.smooth_scroll import enable_smooth_scroll
 
 
 class ProxyPage(QWidget):
@@ -79,6 +80,7 @@ class ProxyPage(QWidget):
         self._chip_layout.setSpacing(8)
         self._chip_layout.addStretch(1)
         self._group_scroll.setWidget(self._chip_host)
+        enable_smooth_scroll(self._group_scroll)
         root.addWidget(self._group_scroll)
 
         self._chip_group = QButtonGroup(self)
@@ -98,6 +100,7 @@ class ProxyPage(QWidget):
 
         self._node_list = QListWidget()
         self._node_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        enable_smooth_scroll(self._node_list)
         self._node_list.itemClicked.connect(self._apply_item)
         root.addWidget(self._node_list, 1)
 
@@ -216,6 +219,10 @@ class ProxyPage(QWidget):
             return
         if node == group.now:
             return
+        # Optimistic update so the selection highlights immediately; the next
+        # refresh reconciles with the core.
+        group.now = node
+        self._render_nodes()
         self._services.proxy.select(group.name, node)
         self._status.setText(f"Switching {group.name} to {node}…")
 

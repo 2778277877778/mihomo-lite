@@ -25,6 +25,7 @@ from mihomo_lite.core import qr
 from mihomo_lite.core.services import Services
 from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.models.profile import Profile, ProfileKind
+from mihomo_lite.ui.widgets.smooth_scroll import enable_smooth_scroll
 from mihomo_lite.utils.logger import redact_url
 
 
@@ -76,6 +77,7 @@ class ProfilePage(QWidget):
 
         self._list = QListWidget()
         self._list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        enable_smooth_scroll(self._list)
         self._list.currentRowChanged.connect(self._on_selection)
         self._list.itemDoubleClicked.connect(lambda _i: self._activate())
         root.addWidget(self._list, 1)

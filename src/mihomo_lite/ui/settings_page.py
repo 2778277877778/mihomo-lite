@@ -26,6 +26,7 @@ from mihomo_lite.core.services import Services
 from mihomo_lite.i18n import tr
 from mihomo_lite.system import startup, wintun
 from mihomo_lite.ui.widgets.controls import Combo
+from mihomo_lite.ui.widgets.smooth_scroll import enable_smooth_scroll
 
 
 class SettingsPage(QWidget):
@@ -47,6 +48,7 @@ class SettingsPage(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        enable_smooth_scroll(scroll)
         outer.addWidget(scroll)
 
         body = QWidget()

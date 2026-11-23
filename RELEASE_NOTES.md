@@ -1,40 +1,24 @@
-# Mihomo Lite v0.4.3
+# Mihomo Lite v0.4.4
 
-Logs that keep up, and a fixed release process.
+Smoother scrolling and instant selection feedback.
 
 ## English
 
-### Fixed
+- Lists, the settings page, logs and the proxy-group strip now scroll with a short
+  OutCubic animation instead of jumping a fixed number of lines per wheel notch.
+  Trackpad pixel deltas are kept, Ctrl+wheel is left to the widget, Shift+wheel scrolls
+  horizontally.
+- Clicking a node highlights it immediately; the core selection is confirmed in the
+  background and reconciled on the next refresh.
 
-- **Logs page stopped updating** once the in-memory buffer filled up: the view used the
-  record count to detect new lines, so once the buffer was full nothing new appeared.
-  Records now carry sequence numbers, the buffer holds 5000 entries, and dropped lines are
-  announced explicitly. Copy/export follow the same data.
-
-### Added
-
-- A release checklist in `docs/RELEASE.md` and `scripts/bump_version.py`, so every future
-  release updates the version, README, bilingual notes and published assets consistently.
-
-### Install
-
-`MihomoLite-Setup-0.4.3-x64.exe` or `MihomoLite-v0.4.3-portable-x64.zip`,
-Windows 10/11 x64. The installer is not code-signed yet.
+Download `MihomoLite-Setup-0.4.4-x64.exe` or `MihomoLite-v0.4.4-portable-x64.zip`.
+Windows 10/11 x64; the installer is not code-signed yet.
 
 ## 中文
 
-### 修复
+- 列表、设置页、日志和代理组栏改为短促的 OutCubic 平滑滚动，不再每个滚轮格跳动固定行数；
+  保留触控板像素增量，Ctrl+滚轮不拦截，Shift+滚轮横向滚动。
+- 点击节点立即高亮，内核切换在后台确认，下次刷新时对齐真实状态。
 
-- **Logs 页显示到一定量后不再更新**：之前用"条数变化"判断新日志，缓冲区满后条数不变，
-  新日志永远不显示。现在每条日志带序号，容量提升到 5000 条，被丢弃的行会明确提示，
-  复制/导出同样完整。
-
-### 新增
-
-- 新增发布清单 `docs/RELEASE.md` 与 `scripts/bump_version.py`：以后每次发布都统一更新
-  版本号、README、中英双语说明与发布资产。
-
-### 安装
-
-`MihomoLite-Setup-0.4.3-x64.exe` 或 `MihomoLite-v0.4.3-portable-x64.zip`，
+下载 `MihomoLite-Setup-0.4.4-x64.exe` 或 `MihomoLite-v0.4.4-portable-x64.zip`。
 支持 Windows 10/11 x64，安装包暂未签名。

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from mihomo_lite.core.services import Services
 from mihomo_lite.ui.widgets.log_view import LogView
+from mihomo_lite.ui.widgets.smooth_scroll import enable_smooth_scroll
 from mihomo_lite.utils.logger import get_ring_buffer
 
 
@@ -58,6 +59,7 @@ class LogsPage(QWidget):
         root.addLayout(header)
 
         self._log = LogView(self)
+        enable_smooth_scroll(self._log)
         root.addWidget(self._log, 1)
 
     def _all_text(self) -> str:
