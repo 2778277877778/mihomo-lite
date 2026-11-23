@@ -64,6 +64,8 @@ ZH: dict[str, str] = {
     "Latency": "延迟",
     "Usage": "用量",
     "Session usage": "本次用量",
+    "IP address": "IP 地址",
+    "Checking…": "检测中…",
     "LAN IP": "内网 IP",
     "Speed test": "测速",
     "Connect first.": "请先连接。",

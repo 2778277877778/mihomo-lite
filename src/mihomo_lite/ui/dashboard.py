@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mihomo_lite.core import net_tools
 from mihomo_lite.core.services import Services
 from mihomo_lite.core.traffic_monitor import TrafficSample, human_bytes, human_speed
 from mihomo_lite.i18n import tr
@@ -33,6 +34,8 @@ class DashboardPage(QWidget):
         super().__init__(parent)
         self._services = services
         self._last_sample = TrafficSample()
+        self._public_ip: str | None = None
+        self._ip_busy = False
         self._build()
 
         services.connection.state_changed.connect(self._on_state)
@@ -56,6 +59,13 @@ class DashboardPage(QWidget):
         self._delay_timer.timeout.connect(self._probe_current_node)
         self._delay_timer.start()
         QTimer.singleShot(3000, self._probe_current_node)
+
+        self._public_ip: str | None = None
+        self._ip_busy = False
+        self._ip_timer = QTimer(self)
+        self._ip_timer.setInterval(60000)
+        self._ip_timer.timeout.connect(self._check_public_ip)
+        self._ip_timer.start()
 
         self._on_state(services.connection.state)
         self._refresh_session()
@@ -140,6 +150,13 @@ class DashboardPage(QWidget):
             layout.addWidget(button)
             button.clicked.connect(lambda _checked=False, m=mode: self._set_mode(m))
         layout.addStretch(1)
+        self._ip_button = QPushButton("Check IP")
+        self._ip_button.setObjectName("Chip")
+        self._ip_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._ip_button.setMinimumWidth(78)
+        self._ip_button.setEnabled(False)
+        self._ip_button.clicked.connect(self._on_ip_button)
+        layout.addWidget(self._ip_button)
         return bar
 
     def _build_metrics(self) -> QGridLayout:
@@ -167,13 +184,13 @@ class DashboardPage(QWidget):
         self._node_row = KeyValueRow("Current node")
         self._latency_row = KeyValueRow("Latency")
         self._usage_row = KeyValueRow("Session usage")
-        self._lan_row = KeyValueRow("LAN IP")
+        self._ip_row = KeyValueRow("IP address")
         for row in (
             self._profile_row,
             self._node_row,
             self._latency_row,
             self._usage_row,
-            self._lan_row,
+            self._ip_row,
         ):
             layout.addWidget(row)
         return card
@@ -250,14 +267,18 @@ class DashboardPage(QWidget):
         profile = self._services.profiles.active_profile()
         if session is not None:
             self._profile_row.set_value(f"{session.profile_name}  ·  up {self._uptime_text()}")
-            self._lan_row.set_value(local_ip())
+            self._ip_row.set_value(self._ip_text(local_ip()))
             self._refresh_current_node()
         else:
             self._profile_row.set_value(profile.name if profile else tr("none selected"))
             self._node_row.set_value("-")
             self._latency_row.set_value("-")
             self._usage_row.set_value("-")
-            self._lan_row.set_value(local_ip())
+            self._ip_row.set_value(self._ip_text(local_ip()))
+
+    def _ip_text(self, lan: str) -> str:
+        public = self._public_ip or "-"
+        return f"{public}  ·  LAN {lan}"
 
     def _current_group(self):
         for group in self._services.proxy.groups:
@@ -288,6 +309,33 @@ class DashboardPage(QWidget):
     def _on_node_stats(self, _stats: object) -> None:
         self._refresh_current_node()
 
+    def _check_public_ip(self) -> None:
+        if not self._services.connection.is_connected or self._ip_busy:
+            return
+        session = self._services.connection.session
+        if session is None:
+            return
+        self._ip_busy = True
+
+        def _ok(result: object) -> None:
+            self._ip_busy = False
+            address = getattr(result, "address", None)
+            if address:
+                self._public_ip = str(address)
+                self._ip_row.set_value(self._ip_text(local_ip()))
+
+        def _failed(_message: str) -> None:
+            self._ip_busy = False
+
+        self._services.runner.submit(
+            net_tools.fetch_public_ip, args=(session.proxy_server,), on_success=_ok, on_error=_failed
+        )
+
+    def _on_ip_button(self) -> None:
+        self._public_ip = None
+        self._ip_row.set_value(f"{tr('Checking…')}  ·  LAN {local_ip()}")
+        self._check_public_ip()
+
     def _probe_current_node(self) -> None:
         if not self._services.connection.is_connected:
             return
@@ -307,9 +355,14 @@ class DashboardPage(QWidget):
     def _on_mode_state(self, state: ConnectionState) -> None:
         for button in self._mode_buttons.values():
             button.setEnabled(state is ConnectionState.CONNECTED)
+        self._ip_button.setEnabled(state is ConnectionState.CONNECTED)
         if state is ConnectionState.CONNECTED:
             self._services.proxy.refresh()
             self._services.proxy.load_config()
+            QTimer.singleShot(1500, self._check_public_ip)
+        elif state in (ConnectionState.STOPPED, ConnectionState.ERROR):
+            self._public_ip = None
+            self._ip_row.set_value(f"-  ·  LAN {local_ip()}")
 
     def _on_traffic(self, sample: TrafficSample) -> None:
         self._last_sample = sample
