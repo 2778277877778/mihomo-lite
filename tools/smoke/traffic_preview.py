@@ -24,4 +24,5 @@ for i in range(90):
     app.traffic.sample.emit(TrafficSample(up=up, down=down, up_total=i*up//3, down_total=i*down//3))
     QApplication.processEvents()
 w.grab().save("tools/smoke/traffic_page.png")
+w.grab().save("docs/images/traffic.png")
 print("traffic page rendered")

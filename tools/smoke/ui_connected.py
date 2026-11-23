@@ -93,7 +93,7 @@ def main() -> int:
     app.window.show_page(0)
     spin(0.3)
     app.window.grab().save(str(out / "dashboard.png"))
-    app.window.show_page(3)
+    app.window.show_page(2)
     spin(1.0)
     app.window.grab().save(str(out / "proxies.png"))
     app.window.show_page(3)

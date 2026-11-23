@@ -7,11 +7,21 @@ import os
 import sys
 from ctypes import wintypes
 
-from PySide6.QtCore import QEvent, QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import (
+    QEasingCurve,
+    QEvent,
+    QPropertyAnimation,
+    QRectF,
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
+)
 from PySide6.QtGui import QCloseEvent, QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -319,8 +329,23 @@ class MainWindow(QMainWindow):
 
     def _show_index(self, index: int) -> None:
         page = self._ensure_page(index)
-        if page is not None:
-            self._stack.setCurrentWidget(page)
+        if page is None:
+            return
+        self._stack.setCurrentWidget(page)
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            return
+        # Short fade keeps page switches from feeling like a hard cut.
+        effect = QGraphicsOpacityEffect(page)
+        effect.setOpacity(0.35)
+        page.setGraphicsEffect(effect)
+        animation = QPropertyAnimation(effect, b"opacity", page)
+        animation.setDuration(150)
+        animation.setStartValue(0.35)
+        animation.setEndValue(1.0)
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        animation.finished.connect(lambda: page.setGraphicsEffect(None))
+        page._fade_animation = animation
+        animation.start()
 
     def show_page(self, index: int) -> None:
         if 0 <= index < self._nav.count():

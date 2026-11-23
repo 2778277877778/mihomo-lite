@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QButtonGroup,
     QHBoxLayout,
@@ -202,8 +203,23 @@ class ProxyPage(QWidget):
                 font = item.font()
                 font.setBold(True)
                 item.setFont(font)
+            colour = self._delay_colour(delay)
+            if colour is not None:
+                item.setForeground(QBrush(QColor(colour)))
             self._node_list.addItem(item)
         self._filter_nodes(self._filter.text())
+
+    @staticmethod
+    def _delay_colour(delay: int | None) -> str | None:
+        if delay is None:
+            return None
+        if delay <= 0:
+            return "#ff8080"
+        if delay <= 120:
+            return "#5fe3a1"
+        if delay <= 300:
+            return "#f5c26b"
+        return "#ff9b7a"
 
     def _filter_nodes(self, text: str) -> None:
         needle = text.strip().lower()

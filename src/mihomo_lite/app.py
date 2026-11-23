@@ -9,6 +9,7 @@ import traceback
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mihomo_lite import __app_id__, __app_name__, __version__, i18n
@@ -61,6 +62,10 @@ class MihomoLiteApp:
         self.qt.setApplicationVersion(__version__)
         self.qt.setWindowIcon(app_icon())
         self.qt.setQuitOnLastWindowClosed(False)
+        font = QFont()
+        font.setFamilies(["Segoe UI Variable Text", "Segoe UI", "Inter", "Arial"])
+        font.setPointSizeF(10.0)
+        self.qt.setFont(font)
         install_wheel_guard(self.qt)
 
         self.paths = app_paths()
