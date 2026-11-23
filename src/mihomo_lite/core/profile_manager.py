@@ -54,10 +54,13 @@ def fetch_subscription(url: str, *, timeout: float = 25.0) -> str:
     except httpx.HTTPError as exc:
         raise ConfigError(f"cannot download the subscription: {redact_url(str(exc))}") from exc
 
-    try:
-        return b"".join(chunks).decode("utf-8-sig")
-    except UnicodeDecodeError as exc:
-        raise ConfigError("subscription is not valid UTF-8 text") from exc
+    raw = b"".join(chunks)
+    for encoding in ("utf-8-sig", "gb18030"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise ConfigError("subscription is not valid UTF-8 text")
 
 
 class ProfileManager(QObject):

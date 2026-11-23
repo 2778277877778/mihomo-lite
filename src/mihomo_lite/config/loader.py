@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import io
+import re
 from pathlib import Path
 from typing import Any
 
@@ -35,8 +37,8 @@ def read_profile_text(path: Path) -> str:
         raise ConfigError(f"cannot read {path.name}: {exc}") from exc
 
 
-def parse_yaml(text: str, *, source: str = "profile") -> dict[str, Any]:
-    """Parse YAML text and require a mapping at the top level."""
+def _parse_any(text: str, *, source: str) -> Any:
+    """Parse YAML without enforcing a top-level mapping."""
     if len(text.encode("utf-8", errors="ignore")) > MAX_PROFILE_BYTES:
         raise ConfigError(f"{source} is too large to import")
     try:
@@ -48,6 +50,12 @@ def parse_yaml(text: str, *, source: str = "profile") -> dict[str, Any]:
         raise ConfigError(f"{source} is not valid YAML{where}: {problem}") from exc
     if data is None:
         raise ConfigError(f"{source} is empty")
+    return data
+
+
+def parse_yaml(text: str, *, source: str = "profile") -> dict[str, Any]:
+    """Parse YAML text and require a mapping at the top level."""
+    data = _parse_any(text, source=source)
     if not isinstance(data, dict):
         raise ConfigError(f"{source} must be a YAML mapping, got {type(data).__name__}")
     return data
@@ -57,12 +65,65 @@ def load_yaml_file(path: Path) -> dict[str, Any]:
     return parse_yaml(read_profile_text(path), source=path.name)
 
 
+_PROXY_URI = re.compile(
+    r"^(ss|ssr|vmess|vless|trojan|hysteria2?|tuic|wireguard|socks|http)://", re.IGNORECASE | re.MULTILINE
+)
+
+
+def _looks_like_links(text: str) -> bool:
+    return bool(_PROXY_URI.search(text[:4000]))
+
+
+def _links_error(source: str) -> ConfigError:
+    return ConfigError(
+        f"{source} is a subscription of proxy links (v2ray/ss/...), not a Clash/Mihomo "
+        "profile. Use the converted Clash subscription URL from your provider "
+        "(often with &flag=clash or a /clash path)."
+    )
+
+
+def _try_base64(text: str) -> str | None:
+    compact = "".join(text.split())
+    if len(compact) < 24:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9+/=_-]+", compact):
+        return None
+    normalized = compact.replace("-", "+").replace("_", "/")
+    normalized += "=" * (-len(normalized) % 4)
+    try:
+        raw = base64.b64decode(normalized, validate=False)
+        return raw.decode("utf-8-sig")
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
 def load_yaml_text(text: str, *, source: str = "subscription") -> dict[str, Any]:
     text = text.strip()
     if not text:
         raise ConfigError(f"{source} is empty")
-    if "<html" in text[:200].lower():
+    if text[:1] == "<" or "<html" in text[:200].lower():
         raise ConfigError(
-            f"{source} returned HTML instead of YAML - the link may be expired or require a login"
+            f"{source} returned HTML instead of YAML - the link may be expired, "
+            "require a login, or need a different User-Agent"
         )
-    return parse_yaml(text, source=source)
+    if _looks_like_links(text):
+        raise _links_error(source)
+
+    data = _parse_any(text, source=source)
+    if isinstance(data, str):
+        # Many providers wrap the profile in base64; the decoded value is still
+        # valid YAML, so YAML parses it as a plain scalar.
+        decoded = _try_base64(data)
+        if decoded is None:
+            raise ConfigError(
+                f"{source} is not a Clash/Mihomo profile (YAML mapping expected)"
+            )
+        if _looks_like_links(decoded):
+            raise _links_error(source)
+        decoded_data = _parse_any(decoded, source=source)
+        if not isinstance(decoded_data, dict):
+            raise ConfigError(f"{source} does not contain a Clash/Mihomo profile")
+        return decoded_data
+    if not isinstance(data, dict):
+        raise ConfigError(f"{source} must be a YAML mapping, got {type(data).__name__}")
+    return data
