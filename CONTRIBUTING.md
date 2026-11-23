@@ -35,6 +35,13 @@ Thanks for helping. This project values small, reviewable changes over big rewri
 - Keep the UI usable while work is in flight: anything slow goes through TaskRunner or a
   dedicated thread.
 
+## Releases
+
+Every user-visible change ships as a release: version bump, README update, bilingual
+`RELEASE_NOTES.md`, tag, and a verified GitHub release with assets. The full checklist and
+the version bump helper are in [docs/RELEASE.md](docs/RELEASE.md) and
+`scripts/bump_version.py`.
+
 ## Commit messages
 
 Short imperative subject, then a body explaining why when it is not obvious.

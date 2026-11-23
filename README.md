@@ -89,6 +89,12 @@ python scripts/build_windows.py              # dist/MihomoLite (core bundled)
 python scripts/build_windows.py --installer  # + Inno Setup installer
 ```
 
+### Release process
+
+Every change ships with a version bump, README details and bilingual release notes; the
+checklist lives in [docs/RELEASE.md](docs/RELEASE.md) and `scripts/bump_version.py` keeps
+the three version strings in sync.
+
 ### How it works
 
 ```text
@@ -189,6 +195,11 @@ ruff check src tests           # 代码检查
 python scripts/build_windows.py              # dist/MihomoLite（含内核）
 python scripts/build_windows.py --installer  # 额外生成 Inno Setup 安装包
 ```
+
+### 发布流程
+
+每次更新都会同步：版本号、README 细节、中英双语 Release 说明；清单见
+[docs/RELEASE.md](docs/RELEASE.md)，版本号用 `scripts/bump_version.py` 统一修改。
 
 ### 工作原理
 
