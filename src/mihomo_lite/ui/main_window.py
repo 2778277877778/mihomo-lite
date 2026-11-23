@@ -37,12 +37,13 @@ from mihomo_lite.ui.profile_page import ProfilePage
 from mihomo_lite.ui.proxy_page import ProxyPage
 from mihomo_lite.ui.settings_page import SettingsPage
 from mihomo_lite.ui.theme import load_stylesheet
+from mihomo_lite.ui.traffic_page import TrafficPage
 from mihomo_lite.ui.tray import TrayController
 from mihomo_lite.ui.widgets.toggle import ToggleSwitch
 
 log = logging.getLogger(__name__)
 
-_NAV = ("Dashboard", "Proxies", "Profiles", "Settings", "Logs")
+_NAV = ("Dashboard", "Traffic", "Proxies", "Profiles", "Settings", "Logs")
 _HT = {
     "client": 1,
     "caption": 2,
@@ -191,6 +192,7 @@ class MainWindow(QMainWindow):
         self._pages: dict[int, QWidget] = {}
         self._factories = [
             lambda: DashboardPage(self._services),
+            lambda: TrafficPage(self._services),
             lambda: ProxyPage(self._services),
             lambda: ProfilePage(self._services),
             lambda: SettingsPage(self._services),
@@ -308,7 +310,7 @@ class MainWindow(QMainWindow):
         if not 0 <= index < len(self._factories):
             return None
         page = self._factories[index]()
-        if index == 3:  # SettingsPage emits theme changes
+        if index == 4:  # SettingsPage emits theme changes
             page.theme_changed.connect(self.apply_theme)
         i18n.translate_widget_tree(page)
         self._pages[index] = page

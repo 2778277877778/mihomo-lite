@@ -9,6 +9,7 @@ from mihomo_lite.core.profile_manager import ProfileManager
 from mihomo_lite.core.proxy_manager import ProxyManager
 from mihomo_lite.core.state_manager import SettingsStore
 from mihomo_lite.core.traffic_monitor import TrafficMonitor
+from mihomo_lite.core.traffic_stats import TrafficStats
 from mihomo_lite.core.update_scheduler import UpdateScheduler
 from mihomo_lite.mihomo.core_manager import CoreManager
 from mihomo_lite.system.paths import AppPaths
@@ -25,4 +26,5 @@ class Services:
     core: CoreManager
     runner: TaskRunner
     traffic: TrafficMonitor
+    stats: TrafficStats
     updates: UpdateScheduler

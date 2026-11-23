@@ -18,6 +18,7 @@ from mihomo_lite.core.proxy_manager import ProxyManager
 from mihomo_lite.core.services import Services
 from mihomo_lite.core.state_manager import SettingsStore
 from mihomo_lite.core.traffic_monitor import TrafficMonitor
+from mihomo_lite.core.traffic_stats import TrafficStats
 from mihomo_lite.core.update_scheduler import UpdateScheduler
 from mihomo_lite.mihomo.core_manager import CoreManager
 from mihomo_lite.system import elevation
@@ -86,6 +87,7 @@ class MihomoLiteApp:
             traffic=self.traffic,
         )
         self.proxy = ProxyManager(lambda: self.connection.api, self.runner)
+        self.stats = TrafficStats(self.paths, self.traffic)
         self.updates = UpdateScheduler(self.settings, self.profiles, self.runner)
         self.services = Services(
             paths=self.paths,
@@ -96,6 +98,7 @@ class MihomoLiteApp:
             core=self.core,
             runner=self.runner,
             traffic=self.traffic,
+            stats=self.stats,
             updates=self.updates,
         )
         self.tray = TrayController(self.services)
@@ -187,6 +190,7 @@ class MihomoLiteApp:
         except Exception:  # noqa: BLE001
             pass
         self.updates.stop()
+        self.stats.flush()
         self.connection.shutdown()
         self.single.release()
 
