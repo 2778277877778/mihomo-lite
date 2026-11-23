@@ -1,6 +1,6 @@
 """Mihomo Lite - a simple, lightweight and reliable Windows client for Mihomo."""
 
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 __app_name__ = "Mihomo Lite"
 __app_id__ = "MihomoLite"
 

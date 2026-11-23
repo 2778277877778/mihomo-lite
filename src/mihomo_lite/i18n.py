@@ -134,6 +134,7 @@ ZH: dict[str, str] = {
     "Update subscriptions automatically": "自动更新订阅",
     "Update interval": "更新间隔",
     "Connect on launch": "启动时自动连接",
+    "Invert scroll direction": "反转滚动方向",
     "Language": "语言",
     "Save settings": "保存设置",
     "Open data folder": "打开数据目录",

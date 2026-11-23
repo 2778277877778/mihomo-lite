@@ -236,11 +236,14 @@ class SettingsPage(QWidget):
         self._start_connected = QCheckBox("Connect on launch")
         grid.addWidget(self._start_connected, 7, 0, 1, 2)
 
-        grid.addWidget(QLabel("Language"), 8, 0)
+        self._invert_scroll = QCheckBox("Invert scroll direction")
+        grid.addWidget(self._invert_scroll, 8, 0, 1, 2)
+
+        grid.addWidget(QLabel("Language"), 9, 0)
         self._language = Combo()
         self._language.addItem("English", "en")
         self._language.addItem("中文", "zh")
-        grid.addWidget(self._language, 8, 1)
+        grid.addWidget(self._language, 9, 1)
         grid.setColumnStretch(1, 1)
         layout.addLayout(grid)
         return card
@@ -255,6 +258,7 @@ class SettingsPage(QWidget):
         self._tun_stack.setCurrentIndex(max(0, index))
         self._tun_dns.setChecked(settings.tun_dns_hijack)
         self._start_connected.setChecked(settings.start_connected)
+        self._invert_scroll.setChecked(settings.invert_scroll)
         self._auto_update.setChecked(settings.auto_update_profiles)
         index = self._update_interval.findData(settings.auto_update_interval_hours)
         self._update_interval.setCurrentIndex(max(0, index))
@@ -354,6 +358,7 @@ class SettingsPage(QWidget):
             auto_update_profiles=self._auto_update.isChecked(),
             auto_update_interval_hours=self._update_interval.currentData(),
             start_connected=self._start_connected.isChecked(),
+            invert_scroll=self._invert_scroll.isChecked(),
             bypass=self._bypass.text().strip(),
             mixed_port=self._mixed_port.value(),
             api_port=self._api_port.value(),
@@ -372,6 +377,9 @@ class SettingsPage(QWidget):
                 else "语言已更改，重启 Mihomo Lite 后生效。",
             )
         self.theme_changed.emit(settings.theme)
+        from mihomo_lite.ui.widgets.smooth_scroll import set_scroll_inverted
+
+        set_scroll_inverted(settings.invert_scroll)
         self._update_core_hint()
         self._update_wintun_hint()
         self._status.setText(

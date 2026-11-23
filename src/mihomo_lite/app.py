@@ -28,6 +28,7 @@ from mihomo_lite.system.single_instance import SingleInstance
 from mihomo_lite.ui.icon import app_icon
 from mihomo_lite.ui.main_window import MainWindow
 from mihomo_lite.ui.tray import TrayController
+from mihomo_lite.ui.widgets.smooth_scroll import set_scroll_inverted
 from mihomo_lite.ui.widgets.wheel_guard import install_wheel_guard
 from mihomo_lite.utils.logger import setup_logging
 from mihomo_lite.utils.tasks import TaskRunner
@@ -75,6 +76,7 @@ class MihomoLiteApp:
         self.settings = SettingsStore(self.paths)
         self.settings.load()
         i18n.set_language(self.settings.current.language)
+        set_scroll_inverted(self.settings.current.invert_scroll)
 
         self.runner = TaskRunner()
         self.profiles = ProfileManager(self.paths)
