@@ -54,6 +54,8 @@ ZH: dict[str, str] = {
     "Select a policy group.": "请选择策略组。",
     "Use selected node": "使用所选节点",
     "Connect first to load proxy groups.": "先连接才能加载代理组。",
+    "Connect to load nodes": "连接后加载节点",
+    "Import a profile first, then connect.": "请先导入配置，再连接。",
     "Filter nodes…": "过滤节点…",
     "Check IP": "检测 IP",
     "Speed test": "测速",

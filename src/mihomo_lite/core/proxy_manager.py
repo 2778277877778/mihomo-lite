@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 from PySide6.QtCore import QObject, Signal
@@ -11,6 +12,8 @@ from mihomo_lite.models.proxy import ProxyGroup, ProxyNode, parse_proxies
 from mihomo_lite.utils.tasks import TaskRunner
 
 DEFAULT_DELAY_URL = "http://www.gstatic.com/generate_204"
+
+log = logging.getLogger(__name__)
 
 
 class ProxyManager(QObject):
@@ -55,6 +58,7 @@ class ProxyManager(QObject):
         groups, nodes = parse_proxies(payload)
         self._groups = groups
         self._nodes = nodes
+        log.info("loaded %s proxy groups and %s nodes", len(groups), len(nodes))
         self.groups_updated.emit(groups, nodes)
 
     def select(self, group: str, name: str) -> None:

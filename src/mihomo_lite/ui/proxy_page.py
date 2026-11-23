@@ -94,10 +94,14 @@ class ProxyPage(QWidget):
         right_layout.addWidget(self._node_list, 1)
 
         actions = QHBoxLayout()
+        self._connect_button = QPushButton("Connect to load nodes")
+        self._connect_button.setObjectName("Primary")
+        self._connect_button.clicked.connect(self._services.connection.connect)
+        actions.addWidget(self._connect_button)
+        actions.addStretch(1)
         self._use_button = QPushButton("Use selected node")
         self._use_button.setObjectName("Primary")
         self._use_button.clicked.connect(self._activate_current)
-        actions.addStretch(1)
         actions.addWidget(self._use_button)
         right_layout.addLayout(actions)
 
@@ -271,10 +275,20 @@ class ProxyPage(QWidget):
         self._ip_button.setEnabled(connected)
         self._speed_button.setEnabled(connected)
         self._use_button.setEnabled(connected and (self._current_group() is not None))
+        self._connect_button.setVisible(not connected)
+        if connected:
+            self._connect_button.setEnabled(False)
+
         if not connected:
             self._group_list.clear()
             self._node_list.clear()
-            self._group_hint.setText("Connect first to load proxy groups.")
+            profile = self._services.profiles.active_profile()
+            if profile is not None:
+                self._group_hint.setText(
+                    f"Profile '{profile.name}' is ready. Press Connect to start the core and load nodes."
+                )
+            else:
+                self._group_hint.setText("Import a profile first, then connect.")
             self._status.setText("")
         elif not self._groups:
             self._services.proxy.refresh()
