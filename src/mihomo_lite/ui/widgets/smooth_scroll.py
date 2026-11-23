@@ -12,10 +12,11 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer
 from PySide6.QtWidgets import QAbstractScrollArea, QScrollBar
 
 _FRAME_MS = 16
-_FRICTION = 0.92
-_MIN_SPEED = 0.35
-_WHEEL_VELOCITY = 5.0  # px per frame for one classic 120-unit notch
-_TRACKPAD_GAIN = 0.08
+_FRICTION = 0.89  # shorter glide: ~42 px per notch instead of ~62 px
+_MIN_SPEED = 0.5
+_WHEEL_VELOCITY = 4.6  # px per frame for one classic 120-unit notch
+_TRACKPAD_GAIN = 0.06
+_MAX_VELOCITY = 70.0
 _inverted = False
 
 
@@ -88,7 +89,7 @@ class SmoothScroller(QObject):
         self._position_h = float(self._area.horizontalScrollBar().value())
 
     def _clamp_velocity(self) -> None:
-        limit = 90.0
+        limit = _MAX_VELOCITY
         self._velocity_v = max(-limit, min(limit, self._velocity_v))
         self._velocity_h = max(-limit, min(limit, self._velocity_h))
 

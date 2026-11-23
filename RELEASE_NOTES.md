@@ -1,20 +1,20 @@
-# Mihomo Lite v0.4.7
+# Mihomo Lite v0.4.8
 
-Scroll direction corrected, plus a switch for touchpad drivers that disagree.
+Toned-down scroll inertia.
 
 ## English
 
-- Fixed: vertical scrolling moved in the opposite direction of the wheel/touchpad gesture.
-- Added **Invert scroll direction** in Settings -> Application, for touchpad drivers that
-  report the opposite sign. It applies immediately to lists, settings and logs.
+- The momentum after a wheel/touchpad gesture is shorter: one wheel notch now glides about
+  40 px (was ~62 px), the glide velocity decays faster and stops sooner.
+- Trackpad flicks contribute less extra motion while the 1:1 tracking feel is unchanged.
 
-Download `MihomoLite-Setup-0.4.7-x64.exe` or `MihomoLite-v0.4.7-portable-x64.zip`.
+Download `MihomoLite-Setup-0.4.8-x64.exe` or `MihomoLite-v0.4.8-portable-x64.zip`.
 Windows 10/11 x64; the installer is not code-signed yet.
 
 ## 中文
 
-- 修复：垂直滚动方向与滚轮/触控手势相反的问题。
-- 设置 → 应用 新增「反转滚动方向」，用于不同触控板驱动的方向差异，勾选后立即生效。
+- 惯性力度调低：每格滚轮滑行约 40px（原约 62px），速度衰减更快、更早停下。
+- 触控板滑动附加的惯性减小，跟手感保持不变。
 
-下载 `MihomoLite-Setup-0.4.7-x64.exe` 或 `MihomoLite-v0.4.7-portable-x64.zip`。
+下载 `MihomoLite-Setup-0.4.8-x64.exe` 或 `MihomoLite-v0.4.8-portable-x64.zip`。
 支持 Windows 10/11 x64，安装包暂未签名。

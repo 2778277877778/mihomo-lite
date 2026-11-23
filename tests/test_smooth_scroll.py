@@ -1,17 +1,21 @@
 import pytest
 
+from mihomo_lite.ui.widgets import smooth_scroll
 from mihomo_lite.ui.widgets.smooth_scroll import SmoothScroller, set_scroll_inverted
+
+WHEEL = smooth_scroll._WHEEL_VELOCITY
+GAIN = smooth_scroll._TRACKPAD_GAIN
 
 
 def test_wheel_notch_converts_to_velocity():
-    assert SmoothScroller._velocity_from(120, 0) == pytest.approx(5.0)
-    assert SmoothScroller._velocity_from(-120, 0) == pytest.approx(-5.0)
-    assert SmoothScroller._velocity_from(240, 0) == pytest.approx(10.0)
+    assert SmoothScroller._velocity_from(120, 0) == pytest.approx(WHEEL)
+    assert SmoothScroller._velocity_from(-120, 0) == pytest.approx(-WHEEL)
+    assert SmoothScroller._velocity_from(240, 0) == pytest.approx(WHEEL * 2)
 
 
 def test_trackpad_pixels_are_gain_scaled():
-    assert SmoothScroller._velocity_from(0, 40) == pytest.approx(3.2)
-    assert SmoothScroller._velocity_from(0, -40) == pytest.approx(-3.2)
+    assert SmoothScroller._velocity_from(0, 40) == pytest.approx(40 * GAIN)
+    assert SmoothScroller._velocity_from(0, -40) == pytest.approx(-40 * GAIN)
 
 
 def test_no_delta_means_no_motion():
@@ -19,7 +23,6 @@ def test_no_delta_means_no_motion():
 
 
 def test_vertical_motion_matches_the_wheel_direction():
-    # Positive (wheel forward / fingers up) scrolls towards the top of the list.
     assert SmoothScroller._axis_delta(5.0, horizontal=False) == -5.0
     assert SmoothScroller._axis_delta(-5.0, horizontal=False) == 5.0
 
