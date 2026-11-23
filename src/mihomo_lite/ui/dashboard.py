@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -18,11 +17,11 @@ from PySide6.QtWidgets import (
 
 from mihomo_lite.core import net_tools
 from mihomo_lite.core.services import Services
-from mihomo_lite.core.traffic_monitor import TrafficSample, human_bytes, human_speed
+from mihomo_lite.core.traffic_monitor import TrafficSample, human_bytes
 from mihomo_lite.i18n import tr
 from mihomo_lite.models.app_state import ConnectionState
-from mihomo_lite.ui.widgets.log_view import LogView
-from mihomo_lite.ui.widgets.status import KeyValueRow, MetricTile, StatusPill
+from mihomo_lite.ui.widgets.latency_chart import LatencyChart
+from mihomo_lite.ui.widgets.status import KeyValueRow, StatusPill
 from mihomo_lite.ui.widgets.toggle import ToggleSwitch
 from mihomo_lite.utils.net import local_ip
 
@@ -93,9 +92,8 @@ class DashboardPage(QWidget):
 
         root.addWidget(self._build_connection_card())
         root.addWidget(self._build_mode_bar())
-        root.addLayout(self._build_metrics())
         root.addWidget(self._build_details_card())
-        root.addWidget(self._build_log_card(), 1)
+        root.addWidget(self._build_latency_card(), 1)
 
     def _build_connection_card(self) -> QWidget:
         card = QFrame()
@@ -159,21 +157,6 @@ class DashboardPage(QWidget):
         layout.addWidget(self._ip_button)
         return bar
 
-    def _build_metrics(self) -> QGridLayout:
-        grid = QGridLayout()
-        grid.setSpacing(12)
-        self._down_tile = MetricTile("Download", "0 B/s")
-        self._up_tile = MetricTile("Upload", "0 B/s")
-        self._total_down = MetricTile("Session download", "0 B")
-        self._total_up = MetricTile("Session upload", "0 B")
-        grid.addWidget(self._down_tile, 0, 0)
-        grid.addWidget(self._up_tile, 0, 1)
-        grid.addWidget(self._total_down, 0, 2)
-        grid.addWidget(self._total_up, 0, 3)
-        for column in range(4):
-            grid.setColumnStretch(column, 1)
-        return grid
-
     def _build_details_card(self) -> QWidget:
         card = QFrame()
         card.setObjectName("Card")
@@ -195,20 +178,20 @@ class DashboardPage(QWidget):
             layout.addWidget(row)
         return card
 
-    def _build_log_card(self) -> QWidget:
+    def _build_latency_card(self) -> QWidget:
         card = QFrame()
         card.setObjectName("Card")
         layout = QVBoxLayout(card)
         layout.setContentsMargins(16, 10, 16, 10)
+        layout.setSpacing(6)
         header = QHBoxLayout()
-        title = QLabel("Core output")
+        title = QLabel("Latency fluctuation (current node)")
         title.setObjectName("MetricLabel")
         header.addWidget(title)
         header.addStretch(1)
         layout.addLayout(header)
-        self._log = LogView(self)
-        self._log.setMinimumHeight(42)
-        layout.addWidget(self._log)
+        self._latency_chart = LatencyChart(self)
+        layout.addWidget(self._latency_chart)
         return card
 
     # -- behaviour ---------------------------------------------------------
@@ -294,6 +277,7 @@ class DashboardPage(QWidget):
         if group is None:
             self._node_row.set_value("-")
             self._latency_row.set_value("-")
+            self._latency_chart.clear()
             return
         self._node_row.set_value(f"{group.now}  ({group.name})")
         stats = self._services.proxy.stats.get(group.now, {})
@@ -305,6 +289,9 @@ class DashboardPage(QWidget):
             self._latency_row.set_value(f"{delay} ms  ±{jitter} ms")
         else:
             self._latency_row.set_value(f"{delay} ms")
+        self._latency_chart.set_series(
+            list(stats.get("history", [])), int(jitter or 0)
+        )
 
     def _on_node_stats(self, _stats: object) -> None:
         self._refresh_current_node()
@@ -366,10 +353,6 @@ class DashboardPage(QWidget):
 
     def _on_traffic(self, sample: TrafficSample) -> None:
         self._last_sample = sample
-        self._down_tile.set_value(human_speed(sample.down))
-        self._up_tile.set_value(human_speed(sample.up))
-        self._total_down.set_value(human_bytes(sample.down_total))
-        self._total_up.set_value(human_bytes(sample.up_total))
         if self._services.connection.session is not None:
             total = sample.down_total + sample.up_total
             self._usage_row.set_value(human_bytes(total))

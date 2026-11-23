@@ -72,9 +72,16 @@ class ProxyManager(QObject):
                 continue
             samples = self._history.setdefault(name, [])
             samples.append(delay)
-            del samples[:-5]
-            jitter = max(samples) - min(samples) if len(samples) > 1 else 0
-            self._stats[name] = {"delay": delay, "jitter": jitter}
+            del samples[:-60]
+            window = samples[-5:]
+            jitter = max(window) - min(window) if len(window) > 1 else 0
+            average = int(sum(window) / len(window))
+            self._stats[name] = {
+                "delay": delay,
+                "jitter": jitter,
+                "average": average,
+                "history": list(samples),
+            }
 
     @property
     def stats(self) -> dict[str, dict[str, int]]:

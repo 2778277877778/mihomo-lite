@@ -63,10 +63,10 @@ class TrafficChart(QWidget):
 
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(QPen(QColor(122, 162, 255), 2))
-        for first, second in zip(down_points, down_points[1:]):
+        for first, second in zip(down_points, down_points[1:], strict=False):
             painter.drawLine(first, second)
         painter.setPen(QPen(QColor(70, 224, 160), 1.5))
-        for first, second in zip(up_points, up_points[1:]):
+        for first, second in zip(up_points, up_points[1:], strict=False):
             painter.drawLine(first, second)
 
         painter.setPen(QColor(170, 180, 200, 200))
