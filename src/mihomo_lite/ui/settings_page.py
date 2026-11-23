@@ -120,9 +120,13 @@ class SettingsPage(QWidget):
         self._verify_button.clicked.connect(self._verify_core)
         self._remove_button = QPushButton("Remove downloaded core")
         self._remove_button.clicked.connect(self._remove_downloaded_core)
+        self._force_stop_button = QPushButton("Force stop core")
+        self._force_stop_button.setObjectName("Danger")
+        self._force_stop_button.clicked.connect(self._force_stop_core)
         buttons.addWidget(self._download_button)
         buttons.addWidget(self._verify_button)
         buttons.addWidget(self._remove_button)
+        buttons.addWidget(self._force_stop_button)
         buttons.addStretch(1)
         layout.addLayout(buttons)
 
@@ -291,6 +295,15 @@ class SettingsPage(QWidget):
         else:
             self._wintun_hint.setText(f"wintun.dll ready in {found.parent}")
             self._wintun_button.setEnabled(False)
+
+    def _force_stop_core(self) -> None:
+        answer = QMessageBox.question(
+            self,
+            "Force stop the core",
+            "Kill the Mihomo core process immediately and restore the system proxy?",
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self._services.connection.force_stop()
 
     def _download_wintun(self) -> None:
         self._wintun_button.setEnabled(False)

@@ -84,6 +84,7 @@ ZH: dict[str, str] = {
     "Download core (≈22 MB)": "下载内核（约 22 MB）",
     "Verify core": "校验内核",
     "Remove downloaded core": "移除已下载内核",
+    "Force stop core": "强制结束内核",
     "Browse…": "浏览…",
     "Network": "网络",
     "Only localhost is exposed. Ports set to 0 pick a free high port on every start.": "只监听本机。端口填 0 表示每次自动选择空闲高端口。",

@@ -252,7 +252,7 @@ class ConnectionManager(QObject):
         self._runner.submit(
             wait_for_api,
             args=(self._api,),
-            kwargs={"timeout": 20.0, "is_cancelled": lambda: self._generation != token},
+            kwargs={"timeout": 45.0, "is_cancelled": lambda: self._generation != token},
             on_success=lambda version: self._on_api_ready(token, version),
             on_error=lambda message: self._on_api_failed(token, message),
         )
@@ -385,6 +385,13 @@ class ConnectionManager(QObject):
 
     def _on_core_output(self, line: str) -> None:
         self._recent_output.append(line)
+        lowered = line.lower()
+        if "level=error" in lowered or "level=fatal" in lowered:
+            log.error("core: %s", line)
+        elif "level=warning" in lowered:
+            log.warning("core: %s", line)
+        else:
+            log.info("core: %s", line)
         self.core_log.emit(line)
 
     def _on_core_started(self, pid: int) -> None:
@@ -438,9 +445,10 @@ class ConnectionManager(QObject):
         if self._state in (ConnectionState.STARTING, ConnectionState.CONNECTED):
             self._stop_reason = "crash"
             self._teardown()
+            tail = [line for line in list(self._recent_output)[-4:] if line.strip()]
+            detail = f" Last output: {tail[-1][:300]}" if tail else ""
             self._fail(
-                f"The Mihomo core exited unexpectedly (code {exit_code}). "
-                "Check the log for details."
+                f"The Mihomo core exited unexpectedly (code {exit_code}).{detail}"
             )
             return
         log.debug("core stopped while already %s", self._state.value)
@@ -494,6 +502,32 @@ class ConnectionManager(QObject):
             log.debug("cannot remove session file: %s", exc)
 
     # -- shutdown ----------------------------------------------------------
+    def force_stop(self) -> None:
+        """Hard-stop the core and repair the proxy, whatever state we are in."""
+        log.warning("force stopping the core")
+        self._generation += 1
+        self._stop_reason = "force"
+        self._set_state(ConnectionState.STOPPING)
+        try:
+            self._traffic.stop()
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            if self._proxy.owns_system_proxy():
+                self._proxy.restore()
+        except ProxyError as exc:
+            log.error("force stop: could not restore the system proxy: %s", exc)
+        self._close_api()
+        try:
+            self._process.kill_now()
+        except Exception:  # noqa: BLE001
+            pass
+        self._clear_session_file()
+        self._session = None
+        self.session_changed.emit(None)
+        self._set_state(ConnectionState.STOPPED)
+        self.warning.emit("The Mihomo core was force-stopped and the system proxy was restored.")
+
     def shutdown(self, timeout_ms: int = 3000) -> None:
         """Best-effort cleanup used on application exit."""
         log.info("shutting down the connection manager")
