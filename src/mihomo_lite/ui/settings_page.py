@@ -5,8 +5,8 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QAbstractSpinBox,
     QCheckBox,
-    QComboBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from mihomo_lite.core.services import Services
 from mihomo_lite.i18n import tr
 from mihomo_lite.system import startup, wintun
+from mihomo_lite.ui.widgets.controls import Combo
 
 
 class SettingsPage(QWidget):
@@ -151,7 +152,7 @@ class SettingsPage(QWidget):
         grid.addWidget(self._tun_enabled, 1, 0, 1, 2)
 
         grid.addWidget(QLabel("TUN stack"), 2, 0)
-        self._tun_stack = QComboBox()
+        self._tun_stack = Combo()
         for label, value in (("Mixed", "mixed"), ("System", "system"), ("gVisor", "gvisor")):
             self._tun_stack.addItem(label, value)
         grid.addWidget(self._tun_stack, 2, 1)
@@ -171,12 +172,16 @@ class SettingsPage(QWidget):
         grid.addWidget(QLabel("Mixed port"), 5, 0)
         self._mixed_port = QSpinBox()
         self._mixed_port.setRange(0, 65535)
+        self._mixed_port.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.PlusMinus)
+        self._mixed_port.setMinimumHeight(32)
         self._mixed_port.setSpecialValueText(tr("Automatic"))
         grid.addWidget(self._mixed_port, 5, 1)
 
         grid.addWidget(QLabel("API port"), 6, 0)
         self._api_port = QSpinBox()
         self._api_port.setRange(0, 65535)
+        self._api_port.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.PlusMinus)
+        self._api_port.setMinimumHeight(32)
         self._api_port.setSpecialValueText(tr("Automatic"))
         grid.addWidget(self._api_port, 6, 1)
 
@@ -202,13 +207,13 @@ class SettingsPage(QWidget):
         grid.addWidget(self._minimize_to_tray, 2, 0, 1, 2)
 
         grid.addWidget(QLabel("Theme"), 3, 0)
-        self._theme = QComboBox()
+        self._theme = Combo()
         self._theme.addItem("Dark", "dark")
         self._theme.addItem("Light", "light")
         grid.addWidget(self._theme, 3, 1)
 
         grid.addWidget(QLabel("Log level"), 4, 0)
-        self._log_level = QComboBox()
+        self._log_level = Combo()
         for level in ("INFO", "DEBUG", "WARNING", "ERROR"):
             self._log_level.addItem(level, level)
         grid.addWidget(self._log_level, 4, 1)
@@ -217,7 +222,7 @@ class SettingsPage(QWidget):
         grid.addWidget(self._auto_update, 5, 0, 1, 2)
 
         grid.addWidget(QLabel("Update interval"), 6, 0)
-        self._update_interval = QComboBox()
+        self._update_interval = Combo()
         for hours in (1, 3, 6, 12, 24, 48):
             self._update_interval.addItem(f"every {hours} h", hours)
         grid.addWidget(self._update_interval, 6, 1)
@@ -226,7 +231,7 @@ class SettingsPage(QWidget):
         grid.addWidget(self._start_connected, 7, 0, 1, 2)
 
         grid.addWidget(QLabel("Language"), 8, 0)
-        self._language = QComboBox()
+        self._language = Combo()
         self._language.addItem("English", "en")
         self._language.addItem("中文", "zh")
         grid.addWidget(self._language, 8, 1)

@@ -16,6 +16,8 @@ class StatusPill(QLabel):
         self.set_state(ConnectionState.STOPPED)
 
     def set_state(self, state: ConnectionState) -> None:
+        if self.property("state") == state.value:
+            return
         self.setProperty("state", state.value)
         self.setText(state.label)
         self.style().unpolish(self)
@@ -39,7 +41,8 @@ class MetricTile(QFrame):
         layout.addWidget(self._value)
 
     def set_value(self, value: str) -> None:
-        self._value.setText(value)
+        if self._value.text() != value:
+            self._value.setText(value)
 
 
 class KeyValueRow(QWidget):
@@ -59,4 +62,5 @@ class KeyValueRow(QWidget):
         layout.addWidget(self._value)
 
     def set_value(self, value: str) -> None:
-        self._value.setText(value)
+        if self._value.text() != value:
+            self._value.setText(value)

@@ -70,10 +70,14 @@ class Shell(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
-        self._backdrop.paint(painter, rect)
 
         path = QPainterPath()
         path.addRoundedRect(rect, self._backdrop.radius, self._backdrop.radius)
+        painter.save()
+        painter.setClipPath(path)
+        self._backdrop.paint(painter, rect)
+        painter.restore()
+
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(QPen(QColor(255, 255, 255, 34), 1.0))
         painter.drawPath(path)
@@ -288,6 +292,7 @@ class MainWindow(QMainWindow):
         # Off-screen renders and systems with transparency switched off keep a
         # readable, nearly opaque base instead of an unblurred desktop.
         self._backdrop.flat = not blurred and os.environ.get("MIHOMO_LITE_TRANSLUCENT") != "1"
+        self._backdrop.invalidate()
         self._shell.update()
 
     def show_and_raise(self) -> None:

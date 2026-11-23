@@ -93,8 +93,9 @@ QLabel#FooterText { color: rgba(238, 242, 249, 0.45); font-size: 11px; }
 QPushButton {
     background: rgba(255, 255, 255, 0.075);
     border: 1px solid rgba(255, 255, 255, 0.11);
-    border-radius: 14px;
-    padding: 8px 16px;
+    border-radius: 15px;
+    padding: 10px 18px;
+    min-height: 20px;
     color: #eef2f9;
 }
 QPushButton:hover { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.20); }
@@ -135,7 +136,7 @@ QListWidget {
     border-radius: 18px;
     padding: 7px;
 }
-QListWidget::item { padding: 10px 12px; border-radius: 12px; margin: 2px 0; color: rgba(238, 242, 249, 0.82); }
+QListWidget::item { padding: 12px 14px; border-radius: 12px; margin: 2px 0; color: rgba(238, 242, 249, 0.82); }
 QListWidget::item:hover { background: rgba(255, 255, 255, 0.07); }
 QListWidget::item:selected {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -148,9 +149,28 @@ QLineEdit, QSpinBox, QComboBox, QPlainTextEdit {
     background: rgba(0, 0, 0, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 13px;
-    padding: 7px 11px;
+    padding: 8px 12px;
+    min-height: 20px;
     selection-background-color: rgba(122, 162, 255, 0.45);
     selection-color: #ffffff;
+}
+QComboBox { padding-right: 36px; }
+QComboBox::drop-down {
+    width: 32px;
+    border: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.10);
+}
+QComboBox QAbstractItemView::item { min-height: 30px; padding: 4px 10px; }
+QSpinBox { padding-right: 32px; }
+QSpinBox::up-button, QSpinBox::down-button {
+    width: 28px;
+    background: rgba(255, 255, 255, 0.07);
+    border-left: 1px solid rgba(255, 255, 255, 0.10);
+}
+QSpinBox::up-button { border-top-right-radius: 12px; }
+QSpinBox::down-button { border-bottom-right-radius: 12px; }
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+    background: rgba(255, 255, 255, 0.16);
 }
 QLineEdit:focus, QSpinBox:focus, QComboBox:focus, QPlainTextEdit:focus {
     border-color: rgba(122, 162, 255, 0.75);
@@ -165,13 +185,14 @@ QComboBox QAbstractItemView {
     selection-background-color: rgba(122, 162, 255, 0.35);
 }
 
-QCheckBox { spacing: 9px; color: rgba(238, 242, 249, 0.80); }
+QCheckBox { spacing: 10px; min-height: 24px; color: rgba(238, 242, 249, 0.80); }
 QCheckBox::indicator {
-    width: 17px; height: 17px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    width: 20px; height: 20px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.26);
     background: rgba(0, 0, 0, 0.25);
 }
+QCheckBox::indicator:hover { border-color: rgba(255, 255, 255, 0.50); }
 QCheckBox::indicator:checked {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #6f9bff, stop:1 #9377ff);
     border-color: rgba(255, 255, 255, 0.35);

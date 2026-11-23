@@ -93,6 +93,21 @@ def bundle_core(target: Path) -> Path:
     return destination
 
 
+def bundle_wintun(target: Path) -> None:
+    """Ship wintun.dll next to the core so TUN works without any download."""
+    from mihomo_lite.system import wintun
+
+    core = target / "runtime" / "mihomo.exe"
+    try:
+        if wintun.locate(core) is None:
+            path = wintun.install(core)
+            print(f"bundled wintun -> {path}")
+        else:
+            print("wintun already present next to the core")
+    except Exception as exc:  # noqa: BLE001 - optional, TUN can download it later
+        print(f"WARNING: wintun not bundled ({exc}); TUN will download it on demand")
+
+
 def copy_licenses(target: Path) -> None:
     for name in ("LICENSE", "README.md", "THIRD_PARTY_NOTICES.md"):
         source = ROOT / name
@@ -113,6 +128,7 @@ def build(*, with_core: bool = True) -> Path:
     copy_licenses(DIST)
     if with_core:
         bundle_core(DIST)
+        bundle_wintun(DIST)
 
     total = sum(f.stat().st_size for f in DIST.rglob("*") if f.is_file())
     print(f"package: {DIST} ({total / 1024 / 1024:.1f} MB)")

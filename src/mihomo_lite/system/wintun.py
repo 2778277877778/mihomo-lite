@@ -77,12 +77,24 @@ def install(core_path: Path, *, progress: ProgressCallback | None = None) -> Pat
 
         try:
             with zipfile.ZipFile(archive) as zf:
+                names = zf.namelist()
                 member = next(
-                    (name for name in zf.namelist() if name.lower() == WINTUN_MEMBER),
+                    (
+                        name
+                        for name in names
+                        if name.replace("\\", "/").lower().endswith("amd64/wintun.dll")
+                    ),
+                    None,
+                ) or next(
+                    (
+                        name
+                        for name in names
+                        if name.replace("\\", "/").lower().endswith("wintun.dll")
+                    ),
                     None,
                 )
                 if member is None:
-                    raise WintunError("the archive does not contain bin/amd64/wintun.dll")
+                    raise WintunError("the archive does not contain an amd64 wintun.dll")
                 with zf.open(member) as src, target.open("wb") as dst:
                     shutil.copyfileobj(src, dst, length=1024 * 64)
         except zipfile.BadZipFile as exc:

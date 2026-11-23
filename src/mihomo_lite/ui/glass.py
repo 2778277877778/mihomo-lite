@@ -16,12 +16,12 @@ import logging
 import sys
 from ctypes import wintypes
 
-from PySide6.QtCore import QPointF, QRectF
+from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QColor,
     QLinearGradient,
     QPainter,
-    QPainterPath,
+    QPixmap,
     QRadialGradient,
 )
 from PySide6.QtWidgets import QWidget
@@ -117,9 +117,18 @@ class AuroraBackdrop:
         #: When the OS refuses to blur the backdrop we paint an almost opaque
         #: base instead, otherwise the desktop would show through unblurred.
         self.flat = False
+        # Gradients are expensive: render them once per size/theme and blit.
+        self._cache = None
+        self._cache_key = None
+
+    def invalidate(self) -> None:
+        self._cache = None
+        self._cache_key = None
 
     def set_theme(self, theme: str) -> None:
-        self.theme = theme
+        if theme != self.theme:
+            self.theme = theme
+            self.invalidate()
 
     def _blobs(self) -> list[tuple[float, float, float, QColor]]:
         if self.theme == "dark":
@@ -137,12 +146,20 @@ class AuroraBackdrop:
         ]
 
     def paint(self, painter: QPainter, rect: QRectF) -> None:
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        path = QPainterPath()
-        path.addRoundedRect(rect, self.radius, self.radius)
-        painter.save()
-        painter.setClipPath(path)
+        size = rect.size().toSize()
+        key = (size.width(), size.height(), self.theme, self.flat, round(self.radius, 1))
+        if self._cache is None or self._cache_key != key:
+            pixmap = QPixmap(size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            inner = QPainter(pixmap)
+            inner.setRenderHint(QPainter.RenderHint.Antialiasing)
+            self._paint_fields(inner, QRectF(0, 0, size.width(), size.height()))
+            inner.end()
+            self._cache = pixmap
+            self._cache_key = key
+        painter.drawPixmap(rect.topLeft(), self._cache)
 
+    def _paint_fields(self, painter: QPainter, rect: QRectF) -> None:
         if self.theme == "dark":
             base = QLinearGradient(rect.topLeft(), rect.bottomRight())
             base.setColorAt(0.0, QColor(14, 18, 30, 250 if self.flat else 168))
@@ -163,5 +180,3 @@ class AuroraBackdrop:
             fade.setAlpha(0)
             gradient.setColorAt(1.0, fade)
             painter.fillRect(rect, gradient)
-
-        painter.restore()
