@@ -10,6 +10,10 @@ A liquid-glass Windows client for the [Mihomo](https://github.com/MetaCubeX/miho
 
 ![Dashboard](docs/images/dashboard.png)
 
+| Traffic | Proxies | Light theme |
+| --- | --- | --- |
+| ![Traffic](docs/images/traffic.png) | ![Proxies](docs/images/proxies.png) | ![Light](docs/images/dashboard-light.png) |
+
 ---
 
 ## English
@@ -27,15 +31,19 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 
 ### Features
 
-- Ships with a verified, unmodified Mihomo core (GPL-3.0) - works offline after install
-- Local YAML import and subscription import/update with backup and validation
+- Ships with a verified, unmodified Mihomo core (GPL-3.0) and wintun.dll - offline after install
+- Downloads are pinned and SHA-256 verified (core, wintun); GitHub Actions are pinned by commit
+- Local YAML, subscription URL and QR-code import, with backup and validation
 - Routing rule checks before connecting: unknown policies, rules after MATCH, missing
   no-resolve, duplicate rules and undefined rule-providers are reported with line numbers
 - A final MATCH rule is appended automatically when a profile has none
 - Windows system proxy handling through the WinINET per-connection API
 - Crash-safe proxy journal: your original proxy setting survives a hard kill
-- Proxy groups, node switching and latency tests
-- Live upload/download speed from the Mihomo WebSocket API
+- Proxies page with group chips, one-click node switching and "Test all delays"
+- Dashboard shows the current node, latency and jitter, session usage, LAN IP,
+  a live public-IP monitor and a Rule/Global/Direct outbound switch
+- Latency fluctuation chart (last 60 samples, average and jitter)
+- Traffic page: live speeds, session and daily totals, rolling 2-minute chart
 - Optional TUN mode (mixed/system/gVisor stacks) with automatic elevation and wintun setup
 - Automatic subscription updates every 1-48 hours, with the previous file kept as a backup
 - Frameless rounded window with frosted glass (Windows acrylic) in dark and light
@@ -71,7 +79,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # run
-pytest                         # 117 tests
+pytest                         # 137 tests
 ruff check src tests           # lint
 ```
 
@@ -125,15 +133,18 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 
 ### 功能
 
-- 内置经过校验的 Mihomo 内核（GPL-3.0，未修改），装完即可离线使用
-- 本地 YAML 导入、订阅链接导入与更新（先备份、再校验、后替换）
+- 内置经过校验的 Mihomo 内核（GPL-3.0）和 wintun.dll，装完即可离线使用
+- 下载物固定版本并做 SHA-256 校验；GitHub Actions 按 commit 固定
+- 本地 YAML、订阅链接、二维码图片导入（先备份、再校验、后替换）
 - 连接前检查路由规则：策略名拼错、MATCH 之后还有规则、IP 规则缺 no-resolve、
   重复规则、未定义的 rule-provider，都会按行号提示
 - 配置缺少最终 MATCH 时自动补一条，不再依赖内核默认行为
 - 通过 WinINET per-connection API 管理 Windows 系统代理
 - 崩溃安全的代理日志：强杀进程也不会把你的代理设置弄丢
-- 代理组、节点切换、延迟测试
-- 基于 Mihomo WebSocket 的实时上下行速度
+- 代理页改为顶部代理组标签 + 下方节点列表，单击即切换，支持"全部测延迟"
+- 首页显示当前节点、延迟与波动、本次用量、内网 IP、公网 IP 动态监测，以及 Rule/Global/Direct 出站切换
+- 延迟波动图（最近 60 个采样、均值与抖动）
+- 流量页：实时速度、本次与今日总量、最近 2 分钟滚动曲线
 - 可选 TUN 模式（mixed/system/gVisor 三种栈），自动请求管理员权限并支持在线安装 wintun
 - 订阅自动更新（1–48 小时可调），更新前保留上一份配置
 - 无边框圆角窗口 + 磨砂玻璃（Windows 亚克力），深浅双主题
@@ -168,7 +179,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # 运行
-pytest                         # 117 个测试
+pytest                         # 137 个测试
 ruff check src tests           # 代码检查
 ```
 
