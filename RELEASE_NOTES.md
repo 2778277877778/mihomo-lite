@@ -1,4 +1,4 @@
-# Mihomo Lite v0.5.0
+# Mihomo Lite v0.5.1
 
 Optional accelerated downloads, with both features off by default.
 
@@ -6,6 +6,10 @@ Optional accelerated downloads, with both features off by default.
 
 ### What changed
 
+- **Fix: connection could stall on machines with a system/registry proxy.** The loopback
+  controller client did not disable environment proxies, so httpx routed `127.0.0.1` API
+  requests through the WinINET proxy and never saw the core become ready. The client now
+  bypasses the system proxy, matching the other local-only transports.
 - **New Downloads page.** Ordinary single-threaded downloads still work exactly as before: pick
   a URL and a save path, and the file goes through the local Mihomo mixed port.
 - **Multi-threaded download (optional, off by default).** A HEAD probe checks the size and
@@ -40,18 +44,21 @@ Optional accelerated downloads, with both features off by default.
 
 ### Verify
 
-- All existing tests plus the new download tests pass: `pytest` (229 tests).
+- All existing tests plus the new download tests pass: `pytest` (230 tests).
 - `ruff check src tests` is clean.
 - Listener syntax was checked against the bundled core (Mihomo v1.19.33) and a real core was
   started to confirm `name/type: mixed/listen: 127.0.0.1/port/proxy` binds correctly.
 
-Download `MihomoLite-Setup-0.5.0-x64.exe` or `MihomoLite-0.5.0-portable-x64.zip`.
+Download `MihomoLite-Setup-0.5.1-x64.exe` or `MihomoLite-0.5.1-portable-x64.zip`.
 Windows 10/11 x64; the installer is not code-signed yet.
 
 ## 中文
 
 ### 本次更新
 
+- **修复：系统/注册表代理环境下连接一直卡在启动。** 本地 controller 客户端没有禁用环境代理，
+  httpx 会把发往 `127.0.0.1` 的 API 请求交给 WinINET 代理，导致始终等不到内核就绪。现在
+  本地 API 客户端会绕过系统代理，与其它本地传输保持一致。
 - **新增“下载”页面。** 普通单线程下载保持原样：填写链接和保存路径，文件经过本地 Mihomo
   mixed 端口下载。
 - **多线程下载（可选，默认关闭）。** 先发 HEAD 请求检查文件大小和 `Accept-Ranges`；
@@ -77,10 +84,10 @@ Windows 10/11 x64; the installer is not code-signed yet.
 
 ### 验证
 
-- 原有测试与新增下载测试全部通过：`pytest`（229 个测试）。
+- 原有测试与新增下载测试全部通过：`pytest`（230 个测试）。
 - `ruff check src tests` 无报错。
 - listeners 写法已对照内置内核（Mihomo v1.19.33）的官方文档与源码，并用真实内核启动验证
   `name/type: mixed/listen: 127.0.0.1/port/proxy` 能正常绑定。
 
-下载 `MihomoLite-Setup-0.5.0-x64.exe` 或 `MihomoLite-0.5.0-portable-x64.zip`。
+下载 `MihomoLite-Setup-0.5.1-x64.exe` 或 `MihomoLite-0.5.1-portable-x64.zip`。
 支持 Windows 10/11 x64，安装包暂未签名。

@@ -33,6 +33,10 @@ class MihomoAPI:
                 base_url=self.base_url,
                 headers={"Authorization": f"Bearer {secret}"},
                 timeout=timeout,
+                # The controller is always loopback. On Windows urllib picks up
+                # the WinINET proxy here, which would send 127.0.0.1 API calls
+                # to an unrelated local proxy port (or fail if it is down).
+                trust_env=False,
             )
         else:
             self._client = client

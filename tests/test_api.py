@@ -17,6 +17,17 @@ def test_version_parsing():
     assert api.version()["version"] == "v1.19.33"
 
 
+def test_owned_client_ignores_environment_proxies(monkeypatch):
+    # A WinINET/registry proxy must never capture the loopback controller API.
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:9")
+    api = MihomoAPI("http://127.0.0.1:9090", "secret")
+    try:
+        assert api._client.trust_env is False
+    finally:
+        api.close()
+
+
 def test_authorization_header_is_sent():
     seen = {}
 
