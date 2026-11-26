@@ -70,6 +70,7 @@ class AppSettings(BaseModel):
     download_multi_node: bool = False
     download_threads: int = 0
     download_nodes: list[str] = Field(default_factory=list)
+    last_proxy_nodes: dict[str, str] = Field(default_factory=dict)
     window_width: int = 980
     window_height: int = 660
 

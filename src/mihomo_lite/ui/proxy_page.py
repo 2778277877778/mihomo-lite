@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -33,11 +34,15 @@ class ProxyPage(QWidget):
         self._nodes: dict[str, ProxyNode] = {}
         self._stats: dict[str, dict[str, int]] = {}
         self._current_group: str = ""
+        self._history: dict[str, str] = dict(services.settings.current.last_proxy_nodes)
         self._build()
 
         services.proxy.groups_updated.connect(self._on_groups)
         services.proxy.node_stats.connect(self._on_stats)
         services.proxy.failed.connect(self._on_error)
+        services.proxy.batch_delay_started.connect(self._on_batch_started)
+        services.proxy.batch_delay_progress.connect(self._on_batch_progress)
+        services.proxy.batch_delay_finished.connect(self._on_batch_finished)
         services.connection.state_changed.connect(self._on_state)
         self._on_state(services.connection.state)
 
@@ -63,8 +68,9 @@ class ProxyPage(QWidget):
         self._speed_button.clicked.connect(self._speed_test)
         self._refresh_button = QPushButton("Refresh")
         self._refresh_button.clicked.connect(lambda: self._services.proxy.refresh())
-        self._delay_button = QPushButton("Test all delays")
-        self._delay_button.clicked.connect(self._test_delay)
+        self._delay_button = QPushButton("Test all nodes")
+        self._delay_button.setToolTip(tr("Quick latency test for every loaded node."))
+        self._delay_button.clicked.connect(self._test_all_delays)
         for button in (self._ip_button, self._speed_button, self._refresh_button, self._delay_button):
             header.addWidget(button)
         root.addLayout(header)
@@ -94,6 +100,13 @@ class ProxyPage(QWidget):
         self._filter.setPlaceholderText(tr("Filter nodes…"))
         self._filter.textChanged.connect(self._filter_nodes)
         row.addWidget(self._filter, 1)
+        self._sort_check = QCheckBox(tr("Sort by latency"))
+        self._sort_check.toggled.connect(self._render_nodes)
+        row.addWidget(self._sort_check)
+        self._previous_button = QPushButton(tr("Previous node"))
+        self._previous_button.clicked.connect(self._use_previous_node)
+        self._previous_button.setEnabled(False)
+        row.addWidget(self._previous_button)
         self._group_hint = QLabel("")
         self._group_hint.setObjectName("Hint")
         row.addWidget(self._group_hint)
@@ -169,6 +182,7 @@ class ProxyPage(QWidget):
         group = self._group()
         if group is not None:
             self._group_hint.setText(f"{group.type} · active: {group.now or '-'}")
+        self._update_previous_button()
 
     def _group(self) -> ProxyGroup | None:
         for group in self._groups:
@@ -191,8 +205,12 @@ class ProxyPage(QWidget):
         group = self._group()
         self._node_list.clear()
         if group is None:
+            self._update_previous_button()
             return
-        for member in group.members:
+        members = list(group.members)
+        if self._sort_check.isChecked():
+            members.sort(key=self._latency_sort_key)
+        for member in members:
             delay = group.delay_of(member)
             label = self._node_title(member, delay)
             if member == group.now:
@@ -208,6 +226,30 @@ class ProxyPage(QWidget):
                 item.setForeground(QBrush(QColor(colour)))
             self._node_list.addItem(item)
         self._filter_nodes(self._filter.text())
+        self._update_previous_button()
+
+    def _latency_sort_key(self, name: str) -> tuple[bool, int, str]:
+        delay = self._stats.get(name, {}).get("delay")
+        if delay is None:
+            group = self._group()
+            delay = group.delay_of(name) if group is not None else None
+        return (delay is None or delay <= 0, delay or 10**9, name.lower())
+
+    def _update_previous_button(self) -> None:
+        group = self._group()
+        target = self._history.get(group.name) if group is not None else None
+        can_use = bool(
+            group is not None
+            and target
+            and target in group.members
+            and target != group.now
+        )
+        self._previous_button.setEnabled(can_use)
+        self._previous_button.setToolTip(
+            tr("Switch back to {node}").format(node=target)
+            if can_use and target
+            else tr("No previous node for this group.")
+        )
 
     @staticmethod
     def _delay_colour(delay: int | None) -> str | None:
@@ -235,6 +277,9 @@ class ProxyPage(QWidget):
             return
         if node == group.now:
             return
+        previous = group.now
+        if previous:
+            self._remember_previous(group.name, previous)
         # Optimistic update so the selection highlights immediately; the next
         # refresh reconciles with the core.
         group.now = node
@@ -242,12 +287,59 @@ class ProxyPage(QWidget):
         self._services.proxy.select(group.name, node)
         self._status.setText(f"Switching {group.name} to {node}…")
 
-    def _test_delay(self) -> None:
-        group = self._group()
-        if group is None:
+    def _remember_previous(self, group_name: str, node: str) -> None:
+        if self._history.get(group_name) == node:
             return
-        self._services.proxy.test_group_delay(group.name)
-        self._status.setText(f"Testing every node in {group.name}…")
+        self._history[group_name] = node
+        self._services.settings.update(last_proxy_nodes=dict(self._history))
+
+    def _use_previous_node(self) -> None:
+        group = self._group()
+        target = self._history.get(group.name) if group is not None else None
+        if group is None or not target or target not in group.members:
+            self._status.setText(tr("No previous node for this group."))
+            self._update_previous_button()
+            return
+        if target == group.now:
+            self._update_previous_button()
+            return
+        current = group.now
+        if current:
+            self._remember_previous(group.name, current)
+        group.now = target
+        self._render_nodes()
+        self._services.proxy.select(group.name, target)
+        self._status.setText(f"Switching {group.name} back to {target}…")
+
+    def _test_all_delays(self) -> None:
+        if not self._services.connection.is_connected:
+            self._status.setText(tr("Connect first."))
+            return
+        if self._services.proxy.batch_running:
+            return
+        total = len(self._services.proxy.nodes)
+        self._status.setText(tr("Testing all nodes: {done}/{total}…").format(done=0, total=total))
+        if not self._services.proxy.test_all_delays():
+            self._status.setText(tr("No nodes to test."))
+
+    def _on_batch_started(self, total: int) -> None:
+        self._delay_button.setEnabled(False)
+        self._status.setText(
+            tr("Testing all nodes: {done}/{total}…").format(done=0, total=total)
+        )
+
+    def _on_batch_progress(self, done: int, total: int) -> None:
+        self._status.setText(
+            tr("Testing all nodes: {done}/{total}…").format(done=done, total=total)
+        )
+
+    def _on_batch_finished(self, results: object) -> None:
+        self._delay_button.setEnabled(self._services.connection.is_connected)
+        count = len(results) if isinstance(results, dict) else 0
+        self._status.setText(tr("Tested {count} nodes.").format(count=count))
+        if count:
+            self._sort_check.setChecked(True)
+            self._render_nodes()
 
     def _proxy_server(self) -> str | None:
         session = self._services.connection.session
@@ -313,8 +405,10 @@ class ProxyPage(QWidget):
 
     def _on_state(self, state: ConnectionState) -> None:
         connected = state is ConnectionState.CONNECTED
-        for button in (self._refresh_button, self._delay_button, self._ip_button, self._speed_button):
+        for button in (self._refresh_button, self._ip_button, self._speed_button):
             button.setEnabled(connected)
+        self._delay_button.setEnabled(connected and not self._services.proxy.batch_running)
+        self._update_previous_button()
         self._filter.setEnabled(connected)
         if not connected:
             self._groups = []

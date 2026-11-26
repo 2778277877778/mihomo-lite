@@ -1,4 +1,4 @@
-# Mihomo Lite v0.5.1
+# Mihomo Lite v0.6.0
 
 Optional accelerated downloads, with both features off by default.
 
@@ -6,6 +6,12 @@ Optional accelerated downloads, with both features off by default.
 
 ### What changed
 
+- **Batch node testing.** The Proxies page can now latency-test every loaded node in one
+  click, with live progress, per-node results and an optional **Sort by latency** view; the
+  list is sorted automatically after a batch run to make picking the fastest node quick.
+- **Previous node.** Each selector group remembers the node you used before the current one.
+  **Previous node** switches straight back (and can toggle between the two), and the choice is
+  persisted across restarts.
 - **Fix: connection could stall on machines with a system/registry proxy.** The loopback
   controller client did not disable environment proxies, so httpx routed `127.0.0.1` API
   requests through the WinINET proxy and never saw the core become ready. The client now
@@ -44,18 +50,22 @@ Optional accelerated downloads, with both features off by default.
 
 ### Verify
 
-- All existing tests plus the new download tests pass: `pytest` (230 tests).
+- All existing tests plus the new download tests pass: `pytest` (235 tests).
 - `ruff check src tests` is clean.
 - Listener syntax was checked against the bundled core (Mihomo v1.19.33) and a real core was
   started to confirm `name/type: mixed/listen: 127.0.0.1/port/proxy` binds correctly.
 
-Download `MihomoLite-Setup-0.5.1-x64.exe` or `MihomoLite-0.5.1-portable-x64.zip`.
+Download `MihomoLite-Setup-0.6.0-x64.exe` or `MihomoLite-0.6.0-portable-x64.zip`.
 Windows 10/11 x64; the installer is not code-signed yet.
 
 ## 中文
 
 ### 本次更新
 
+- **一键测试全部节点。** 代理页可以一次测完所有已加载节点的延迟，显示实时进度与每节点结果，
+  并提供“按延迟排序”；批量测试结束后会自动排序，方便直接选择最快的节点。
+- **上一个节点。** 每个 Selector 策略组会记住上一个使用过的节点；“上一个节点”按钮可快速切回
+  （并可在两个节点间来回切换），选择会跨重启保存。
 - **修复：系统/注册表代理环境下连接一直卡在启动。** 本地 controller 客户端没有禁用环境代理，
   httpx 会把发往 `127.0.0.1` 的 API 请求交给 WinINET 代理，导致始终等不到内核就绪。现在
   本地 API 客户端会绕过系统代理，与其它本地传输保持一致。
@@ -84,10 +94,10 @@ Windows 10/11 x64; the installer is not code-signed yet.
 
 ### 验证
 
-- 原有测试与新增下载测试全部通过：`pytest`（230 个测试）。
+- 原有测试与新增下载测试全部通过：`pytest`（235 个测试）。
 - `ruff check src tests` 无报错。
 - listeners 写法已对照内置内核（Mihomo v1.19.33）的官方文档与源码，并用真实内核启动验证
   `name/type: mixed/listen: 127.0.0.1/port/proxy` 能正常绑定。
 
-下载 `MihomoLite-Setup-0.5.1-x64.exe` 或 `MihomoLite-0.5.1-portable-x64.zip`。
+下载 `MihomoLite-Setup-0.6.0-x64.exe` 或 `MihomoLite-0.6.0-portable-x64.zip`。
 支持 Windows 10/11 x64，安装包暂未签名。

@@ -40,7 +40,8 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 - A final MATCH rule is appended automatically when a profile has none
 - Windows system proxy handling through the WinINET per-connection API
 - Crash-safe proxy journal: your original proxy setting survives a hard kill
-- Proxies page with group chips, one-click node switching and "Test all delays"
+- Proxies page with group chips, one-click node switching, a batch latency test across every
+  loaded node, sort-by-latency, and a per-group "Previous node" button that survives restarts
 - Profiles page with glass cards for multiple subscriptions (active/selected badges, compact
   details), and a tray notification when minimising to the tray
 - Dashboard shows the current node, latency and jitter, session usage, LAN IP,
@@ -91,7 +92,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # run
-pytest                         # 230 tests
+pytest                         # 235 tests
 ruff check src tests           # lint
 ```
 
@@ -163,7 +164,8 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 - 配置缺少最终 MATCH 时自动补一条，不再依赖内核默认行为
 - 通过 WinINET per-connection API 管理 Windows 系统代理
 - 崩溃安全的代理日志：强杀进程也不会把你的代理设置弄丢
-- 代理页改为顶部代理组标签 + 下方节点列表，单击即切换，支持"全部测延迟"
+- 代理页顶部代理组标签 + 节点列表，单击即切换；支持一键测试全部节点延迟、按延迟排序，
+  以及跨重启保留的“上一个节点”快捷切换
 - 配置页使用玻璃卡片展示多个订阅（当前使用/已选中标识、紧凑详情），最小化到托盘时给出提示
 - 首页显示当前节点、延迟与波动、本次用量、内网 IP、公网 IP 动态监测，以及 Rule/Global/Direct 出站切换
 - 延迟波动图（最近 60 个采样、均值与抖动）
@@ -209,7 +211,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # 运行
-pytest                         # 230 个测试
+pytest                         # 235 个测试
 ruff check src tests           # 代码检查
 ```
 

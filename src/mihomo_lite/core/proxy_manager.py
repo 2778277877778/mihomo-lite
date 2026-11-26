@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 
 from PySide6.QtCore import QObject, Signal
 
@@ -23,6 +25,10 @@ class ProxyManager(QObject):
     failed = Signal(str)
     node_stats = Signal(object)  # {name: {"delay": ms, "jitter": ms}}
     mode_changed = Signal(str)
+    batch_delay_started = Signal(int)
+    batch_delay_progress = Signal(int, int)
+    batch_delay_result = Signal(str, int)
+    batch_delay_finished = Signal(object)
 
     def __init__(
         self,
@@ -38,6 +44,8 @@ class ProxyManager(QObject):
         self._history: dict[str, list[int]] = {}
         self._stats: dict[str, dict[str, int]] = {}
         self._mode = ""
+        self._batch_running = False
+        self.batch_delay_result.connect(self._on_batch_delay_result)
 
     @property
     def groups(self) -> list[ProxyGroup]:
@@ -86,6 +94,10 @@ class ProxyManager(QObject):
     @property
     def stats(self) -> dict[str, dict[str, int]]:
         return dict(self._stats)
+
+    @property
+    def batch_running(self) -> bool:
+        return self._batch_running
 
     @property
     def mode(self) -> str:
@@ -153,6 +165,77 @@ class ProxyManager(QObject):
             on_success=_ok,
             on_error=self.failed.emit,
         )
+
+    def test_all_delays(self) -> bool:
+        """Probe every loaded node in parallel and publish partial results."""
+        api = self._api_provider()
+        names = sorted(self._nodes)
+        if api is None or not names or self._batch_running:
+            return False
+        self._batch_running = True
+        total = len(names)
+        self.batch_delay_started.emit(total)
+
+        def work() -> dict[str, int]:
+            results: dict[str, int] = {}
+            done = 0
+            lock = threading.Lock()
+
+            def probe(name: str) -> None:
+                nonlocal done
+                try:
+                    delay = int(
+                        api.proxy_delay(name, DEFAULT_DELAY_URL, timeout_ms=3000)
+                    )
+                except Exception:  # noqa: BLE001 - one dead node must not stop the batch
+                    delay = 0
+                results[name] = delay
+                if delay > 0:
+                    self.batch_delay_result.emit(name, delay)
+                with lock:
+                    done += 1
+                    current = done
+                self.batch_delay_progress.emit(current, total)
+
+            with ThreadPoolExecutor(max_workers=4, thread_name_prefix="proxy-delay") as pool:
+                list(pool.map(probe, names))
+            return results
+
+        self._runner.submit(
+            work,
+            on_success=self._on_all_delays_done,
+            on_error=self._on_all_delays_failed,
+        )
+        return True
+
+    def _on_batch_delay_result(self, name: str, delay: int) -> None:
+        if delay <= 0:
+            return
+        self._record_delays({name: delay})
+        self._apply_delays_to_groups({name: delay})
+        self.node_stats.emit(dict(self._stats))
+
+    def _apply_delays_to_groups(self, delays: dict[str, int]) -> None:
+        for group in self._groups:
+            for member in group.members:
+                if member in delays:
+                    group.delays[member] = delays[member]
+
+    def _on_all_delays_done(self, results: object) -> None:
+        self._batch_running = False
+        delays = results if isinstance(results, dict) else {}
+        valid = {str(name): int(delay) for name, delay in delays.items() if int(delay) > 0}
+        if valid:
+            self._record_delays(valid)
+            self._apply_delays_to_groups(valid)
+        self.groups_updated.emit(self._groups, self._nodes)
+        self.node_stats.emit(dict(self._stats))
+        self.batch_delay_finished.emit(valid)
+
+    def _on_all_delays_failed(self, message: str) -> None:
+        self._batch_running = False
+        self.failed.emit(message)
+        self.batch_delay_finished.emit({})
 
     def test_group_delay(
         self, group: str, url: str = DEFAULT_DELAY_URL, timeout_ms: int = 5000
