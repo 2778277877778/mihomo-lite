@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from mihomo_lite.core.connection_manager import ConnectionManager
+from mihomo_lite.core.download_catalog import DownloadCatalog
+from mihomo_lite.core.download_manager import DownloadManager
 from mihomo_lite.core.profile_manager import ProfileManager
 from mihomo_lite.core.proxy_manager import ProxyManager
 from mihomo_lite.core.state_manager import SettingsStore
@@ -24,6 +26,8 @@ class Services:
     connection: ConnectionManager
     proxy: ProxyManager
     core: CoreManager
+    catalog: DownloadCatalog
+    download: DownloadManager
     runner: TaskRunner
     traffic: TrafficMonitor
     stats: TrafficStats

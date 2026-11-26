@@ -7,6 +7,7 @@ that is written to runtime/generated.yaml.
 from __future__ import annotations
 
 import copy
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,7 @@ from typing import Any
 import yaml
 
 from mihomo_lite.config.defaults import MANAGED_KEYS
+from mihomo_lite.config.download_listeners import DownloadListener
 from mihomo_lite.config.rules import default_policy, has_final_match
 from mihomo_lite.utils.exceptions import ConfigError
 from mihomo_lite.utils.fs import atomic_write_text
@@ -50,6 +52,8 @@ def generate_runtime_config(
     tun_stack: str = "mixed",
     tun_dns_hijack: bool = True,
     dns_port: int | None = None,
+    download_listeners: Sequence[DownloadListener] | None = None,
+    extra_proxies: Sequence[dict[str, Any]] | None = None,
 ) -> GeneratedConfig:
     """Return a hardened copy of *profile* ready for the core to load."""
     if not isinstance(profile, dict):
@@ -107,9 +111,45 @@ def generate_runtime_config(
             notes.append("TUN was requested by the profile but is disabled in Settings")
         data["tun"] = {"enable": False}
 
-    if data.get("listeners"):
-        notes.append("custom listeners were removed; only the local mixed port is exposed")
-    data.pop("listeners", None)
+    if download_listeners:
+        # Multi-node downloads are the only feature allowed to add listeners.
+        # They replace any listeners that came from the imported profile.
+        proxies = data.get("proxies")
+        proxies = proxies if isinstance(proxies, list) else []
+        by_name: dict[str, dict[str, Any]] = {
+            str(proxy.get("name")): proxy
+            for proxy in proxies
+            if isinstance(proxy, dict) and proxy.get("name")
+        }
+        for proxy in extra_proxies or ():
+            if not isinstance(proxy, dict) or not proxy.get("name"):
+                raise ConfigError("an extra proxy for a download listener is invalid")
+            name = str(proxy["name"])
+            existing = by_name.get(name)
+            if existing is not None:
+                if existing != proxy:
+                    raise ConfigError(
+                        f"node '{name}' has different definitions in different profiles; "
+                        "rename one of them before selecting it for multi-node downloads"
+                    )
+                continue
+            copied = copy.deepcopy(proxy)
+            proxies.append(copied)
+            by_name[name] = copied
+        data["proxies"] = proxies
+        for listener in download_listeners:
+            if listener.node not in by_name:
+                raise ConfigError(
+                    f"the selected download node '{listener.node}' is not available in the runtime config"
+                )
+        data["listeners"] = [listener.to_config() for listener in download_listeners]
+        notes.append(
+            f"added {len(download_listeners)} loopback listener(s) for multi-node downloads"
+        )
+    else:
+        if data.get("listeners"):
+            notes.append("custom listeners were removed; only the local mixed port is exposed")
+        data.pop("listeners", None)
 
     rules = data.get("rules")
     if isinstance(rules, list):

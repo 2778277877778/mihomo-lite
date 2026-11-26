@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from mihomo_lite.config.defaults import DEFAULT_BYPASS
 from mihomo_lite.i18n import tr
@@ -66,6 +66,10 @@ class AppSettings(BaseModel):
     tun_enabled: bool = False
     tun_stack: str = "mixed"
     tun_dns_hijack: bool = True
+    download_multithreaded: bool = False
+    download_multi_node: bool = False
+    download_threads: int = 0
+    download_nodes: list[str] = Field(default_factory=list)
     window_width: int = 980
     window_height: int = 660
 
@@ -106,6 +110,21 @@ class AppSettings(BaseModel):
         if value not in {1, 3, 6, 12, 24, 48}:
             raise ValueError("auto_update_interval_hours must be one of 1, 3, 6, 12, 24, 48")
         return value
+
+    @field_validator("download_threads")
+    @classmethod
+    def _check_download_threads(cls, value: int) -> int:
+        if value != 0 and not (4 <= value <= 16):
+            raise ValueError("download_threads must be 0 (automatic) or between 4 and 16")
+        return value
+
+    @model_validator(mode="after")
+    def _enforce_download_dependency(self) -> AppSettings:
+        # "Multi-node" only makes sense inside a multi-threaded download. Assign
+        # through object.__setattr__ so validate_assignment does not recurse.
+        if not self.download_multithreaded and self.download_multi_node:
+            object.__setattr__(self, "download_multi_node", False)
+        return self
 
     @field_validator("mixed_port", "api_port")
     @classmethod

@@ -19,7 +19,13 @@ w.resize(1000, 680)
 w.show()
 QApplication.processEvents()
 out = Path("tools/smoke")
-for index, name in ((0, "zh_dashboard"), (3, "zh_settings"), (2, "zh_profiles"), (1, "zh_proxies")):
+for index, name in (
+    (0, "zh_dashboard"),
+    (2, "zh_downloads"),
+    (5, "zh_settings"),
+    (4, "zh_profiles"),
+    (3, "zh_proxies"),
+):
     w.show_page(index)
     QApplication.processEvents()
     w.grab().save(str(out / f"{name}.png"))

@@ -3,7 +3,7 @@
 ; Then run:     ISCC.exe packaging\installer.iss
 
 #define MyAppName "Mihomo Lite"
-#define MyAppVersion "0.4.9"
+#define MyAppVersion "0.5.0"
 #define MyAppPublisher "Mihomo Lite contributors"
 #define MyAppExeName "MihomoLite.exe"
 #define MyAppId "{{7B6D3A2E-9C41-4E77-9A2B-1F3C5D8E6A10}"

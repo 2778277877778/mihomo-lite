@@ -72,6 +72,24 @@ Turn TUN off to go back to system-proxy mode.
 backup, and are validated before replacing anything. If the active profile changes, disconnect
 and connect again to apply it. **Profiles -> Update all** triggers a check immediately.
 
+## 4.8 Downloads (optional acceleration)
+
+The **Downloads** page fetches a file through the local Mihomo proxy. Connect first; the
+page refuses to start while disconnected.
+
+- Ordinary single-threaded download is always available.
+- **Multi-threaded download** (Settings -> Downloads, off by default) splits a range-capable
+  file into 4-16 segments, preallocates the target and resumes after an interruption. Servers
+  that do not advertise `Accept-Ranges` fall back to one connection.
+- **Multi-node parallel** (off by default, requires multi-threaded) lets you tick nodes across
+  profiles. Reconnect after changing the selection: the runtime copy gets one loopback listener
+  per node, and each segment is pinned to a node through its own port. A failing node is marked
+  abnormal and its remaining segments move to other nodes; HTTP 403/429 responses reduce
+  concurrency and can fall back to a single node.
+
+With both switches off, nothing extra is generated and the page stays on the ordinary
+single-threaded path.
+
 ## 5. Switch nodes
 
 Open **Proxies** while connected. Pick a policy group on the left, then either double-click a

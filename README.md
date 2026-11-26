@@ -41,10 +41,16 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 - Windows system proxy handling through the WinINET per-connection API
 - Crash-safe proxy journal: your original proxy setting survives a hard kill
 - Proxies page with group chips, one-click node switching and "Test all delays"
+- Profiles page with glass cards for multiple subscriptions (active/selected badges, compact
+  details), and a tray notification when minimising to the tray
 - Dashboard shows the current node, latency and jitter, session usage, LAN IP,
   a live public-IP monitor and a Rule/Global/Direct outbound switch
 - Latency fluctuation chart (last 60 samples, average and jitter)
 - Traffic page: live speeds, session and daily totals, rolling 2-minute chart
+- Downloads page: ordinary single-threaded downloads are always available
+- Optional accelerated downloads: multi-threaded segmented downloads (4-16 threads, resume,
+  retries), plus a multi-node mode that carries segments through loopback listeners pinned to
+  distinct nodes. Both switches are off by default; multi-node requires multi-threaded
 - Optional TUN mode (mixed/system/gVisor stacks) with automatic elevation and wintun setup
 - Automatic subscription updates every 1-48 hours, with the previous file kept as a backup
 - Frameless rounded window with frosted glass (Windows acrylic) in dark and light
@@ -85,7 +91,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # run
-pytest                         # 137 tests
+pytest                         # 229 tests
 ruff check src tests           # lint
 ```
 
@@ -111,6 +117,9 @@ PySide6 UI -> ConnectionManager -> MihomoProcess / MihomoAPI / SystemProxy
 - The UI never talks to the core directly; it follows one state machine.
 - Imported profiles are never modified. A hardened runtime copy is generated with a
   localhost-only controller, a fresh random secret, TUN disabled and random ports.
+- Downloads always go through the local mixed port. Only when multi-node is enabled does the
+  runtime copy (never the imported profile) also receive one 127.0.0.1 mixed listener per
+  selected node; each listener is pinned to its node and no controller call switches nodes.
 - The system proxy is journalled before it changes and replayed on the next start if the
   owning process is gone.
 
@@ -155,9 +164,13 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
 - 通过 WinINET per-connection API 管理 Windows 系统代理
 - 崩溃安全的代理日志：强杀进程也不会把你的代理设置弄丢
 - 代理页改为顶部代理组标签 + 下方节点列表，单击即切换，支持"全部测延迟"
+- 配置页使用玻璃卡片展示多个订阅（当前使用/已选中标识、紧凑详情），最小化到托盘时给出提示
 - 首页显示当前节点、延迟与波动、本次用量、内网 IP、公网 IP 动态监测，以及 Rule/Global/Direct 出站切换
 - 延迟波动图（最近 60 个采样、均值与抖动）
 - 流量页：实时速度、本次与今日总量、最近 2 分钟滚动曲线
+- 下载页：始终提供普通单线程下载
+- 可选下载加速：多线程分段下载（4–16 线程、断点续传、失败重试），以及多节点并行——
+  各分段通过绑定到不同节点的 127.0.0.1 listener 传输。两个开关默认关闭，多节点依赖多线程
 - 可选 TUN 模式（mixed/system/gVisor 三种栈），自动请求管理员权限并支持在线安装 wintun
 - 订阅自动更新（1–48 小时可调），更新前保留上一份配置
 - 无边框圆角窗口 + 磨砂玻璃（Windows 亚克力），深浅双主题
@@ -196,7 +209,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # 运行
-pytest                         # 137 个测试
+pytest                         # 229 个测试
 ruff check src tests           # 代码检查
 ```
 
@@ -219,6 +232,9 @@ PySide6 界面 -> ConnectionManager -> MihomoProcess / MihomoAPI / SystemProxy
 ```
 
 - 界面不直接操作内核，只观察唯一的状态机。
+- 下载始终经过本地 mixed 端口；只有开启多节点时，运行副本（不是导入的配置）才会为每个
+  选中节点额外生成一个只监听 127.0.0.1 的 mixed listener，每个 listener 固定走指定节点，
+  不调用 controller 切换节点。
 - 导入的配置永不修改；运行时另生成加固副本：内核只监听 127.0.0.1、每次随机 secret、
   关闭 TUN、端口随机。
 - 系统代理改动前写 journal；若进程异常退出，下次启动自动还原。

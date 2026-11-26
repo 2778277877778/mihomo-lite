@@ -27,11 +27,13 @@ from mihomo_lite.i18n import tr
 from mihomo_lite.system import startup, wintun
 from mihomo_lite.ui.widgets.controls import Combo
 from mihomo_lite.ui.widgets.smooth_scroll import enable_smooth_scroll
+from mihomo_lite.ui.widgets.toggle import ToggleSwitch
 
 
 class SettingsPage(QWidget):
     theme_changed = Signal(str)
     download_progress = Signal(int, int)
+    open_downloads_requested = Signal()
 
     def __init__(self, services: Services, parent=None) -> None:
         super().__init__(parent)
@@ -66,6 +68,7 @@ class SettingsPage(QWidget):
 
         root.addWidget(self._build_core_card())
         root.addWidget(self._build_network_card())
+        root.addWidget(self._build_downloads_card())
         root.addWidget(self._build_app_card())
         root.addStretch(1)
 
@@ -199,6 +202,90 @@ class SettingsPage(QWidget):
         layout.addLayout(grid)
         return card
 
+    def _build_downloads_card(self) -> QWidget:
+        card, layout = self._section(
+            "Downloads",
+            "Optional parallel downloads through the Mihomo core. "
+            "Both options are off by default.",
+        )
+
+        self._download_multithreaded = ToggleSwitch(width=52, height=30)
+        self._download_multithreaded.toggled.connect(self._sync_download_controls)
+        row = QHBoxLayout()
+        texts = QVBoxLayout()
+        texts.setSpacing(2)
+        texts.addWidget(QLabel("Multi-threaded download"))
+        description = QLabel("Split one file into parallel segments inside a single node.")
+        description.setObjectName("Hint")
+        description.setWordWrap(True)
+        texts.addWidget(description)
+        row.addLayout(texts, 1)
+        row.addWidget(self._download_multithreaded, 0, Qt.AlignmentFlag.AlignTop)
+        layout.addLayout(row)
+
+        self._download_multi_node = ToggleSwitch(width=52, height=30)
+        row = QHBoxLayout()
+        texts = QVBoxLayout()
+        texts.setSpacing(2)
+        texts.addWidget(QLabel("Multi-node parallel"))
+        description = QLabel(
+            "Segments use different nodes through dedicated loopback ports."
+        )
+        description.setObjectName("Hint")
+        description.setWordWrap(True)
+        texts.addWidget(description)
+        self._download_dependency_hint = QLabel(
+            "Requires multi-threaded download. Turn that on first."
+        )
+        self._download_dependency_hint.setObjectName("Hint")
+        self._download_dependency_hint.setWordWrap(True)
+        texts.addWidget(self._download_dependency_hint)
+        row.addLayout(texts, 1)
+        row.addWidget(self._download_multi_node, 0, Qt.AlignmentFlag.AlignTop)
+        layout.addLayout(row)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(8)
+        self._download_threads = Combo()
+        self._download_threads.addItem("Auto (4–16)", 0)
+        for count in range(4, 17):
+            self._download_threads.addItem(str(count), count)
+        grid.setColumnStretch(1, 1)
+        grid.addWidget(QLabel("Threads"), 0, 0)
+        grid.addWidget(self._download_threads, 0, 1)
+        self._download_selected = QLabel("Selected nodes: 0")
+        grid.addWidget(self._download_selected, 1, 0, 1, 2)
+        nodes_hint = QLabel("Choose nodes on the Downloads page.")
+        nodes_hint.setObjectName("Hint")
+        nodes_hint.setWordWrap(True)
+        grid.addWidget(nodes_hint, 2, 0, 1, 2)
+        layout.addLayout(grid)
+
+        start_hint = QLabel(
+            "These switches only enable the optimizer. Enter the URL and start the download "
+            "on the Downloads page."
+        )
+        start_hint.setObjectName("Hint")
+        start_hint.setWordWrap(True)
+        layout.addWidget(start_hint)
+        self._open_downloads_button = QPushButton("Open Downloads page")
+        self._open_downloads_button.clicked.connect(self.open_downloads_requested.emit)
+        layout.addWidget(self._open_downloads_button, 0, Qt.AlignmentFlag.AlignLeft)
+        return card
+
+    def _sync_download_controls(self, _checked: bool | None = None) -> None:
+        multithreaded = self._download_multithreaded.isChecked()
+        if not multithreaded and self._download_multi_node.isChecked():
+            self._download_multi_node.setChecked(False)
+        self._download_multi_node.setEnabled(multithreaded)
+        self._download_threads.setEnabled(multithreaded)
+        self._download_dependency_hint.setVisible(not multithreaded)
+
+    def _update_selected_nodes(self) -> None:
+        count = len(self._services.settings.current.download_nodes)
+        self._download_selected.setText(tr("Selected nodes: {count}").format(count=count))
+
     def _build_app_card(self) -> QWidget:
         card, layout = self._section("Application", "Startup, tray and appearance.")
         grid = QGridLayout()
@@ -274,6 +361,12 @@ class SettingsPage(QWidget):
         self._log_level.setCurrentIndex(max(0, index))
         index = self._language.findData(settings.language)
         self._language.setCurrentIndex(max(0, index))
+        self._download_multithreaded.setChecked(settings.download_multithreaded)
+        self._download_multi_node.setChecked(settings.download_multi_node)
+        index = self._download_threads.findData(settings.download_threads)
+        self._download_threads.setCurrentIndex(max(0, index))
+        self._update_selected_nodes()
+        self._sync_download_controls()
         self._update_core_hint()
         self._update_wintun_hint()
 
@@ -347,7 +440,16 @@ class SettingsPage(QWidget):
             autostart_ok = False
             QMessageBox.warning(self, "Autostart", str(exc))
 
-        previous_language = self._services.settings.current.language
+        previous = self._services.settings.current
+        previous_language = previous.language
+        multithreaded = self._download_multithreaded.isChecked()
+        multi_node = self._download_multi_node.isChecked() and multithreaded
+        threads = int(self._download_threads.currentData() or 0)
+        download_changed = (
+            previous.download_multithreaded != multithreaded
+            or previous.download_multi_node != multi_node
+            or previous.download_threads != threads
+        )
         settings = self._services.settings.update(
             language=self._language.currentData(),
             core_path=self._core_path.text().strip(),
@@ -367,6 +469,10 @@ class SettingsPage(QWidget):
             minimize_to_tray=self._minimize_to_tray.isChecked(),
             theme=self._theme.currentData(),
             log_level=self._log_level.currentData(),
+            download_multithreaded=multithreaded,
+            download_multi_node=multi_node,
+            download_threads=threads,
+            download_nodes=list(previous.download_nodes),
         )
         if settings.language != previous_language:
             QMessageBox.information(
@@ -382,10 +488,24 @@ class SettingsPage(QWidget):
         set_scroll_inverted(settings.invert_scroll)
         self._update_core_hint()
         self._update_wintun_hint()
+        self._update_selected_nodes()
+        self._sync_download_controls()
+        download_note = ""
+        if download_changed:
+            applied = bool(
+                self._services.connection.is_connected
+                and self._services.connection.reload_download_config()
+            )
+            download_note = " " + (
+                tr("Download settings applied.")
+                if applied
+                else tr("Reconnect to apply the download settings.")
+            )
         self._status.setText(
             "Saved."
             + ("" if autostart_ok else " Autostart could not be updated.")
             + " Port changes apply on the next connect."
+            + download_note
         )
 
     # -- core management ---------------------------------------------------
@@ -398,17 +518,37 @@ class SettingsPage(QWidget):
         self._core_path.setText(path)
         self._verify_core()
 
+    def _set_core_hint_state(self, state: str) -> None:
+        self._core_hint.setProperty("state", state)
+        self._core_hint.style().unpolish(self._core_hint)
+        self._core_hint.style().polish(self._core_hint)
+
     def _verify_core(self) -> None:
         self._verify_button.setEnabled(False)
-        self._core_hint.setText("Verifying…")
+        self._set_core_hint_state("")
+        self._core_hint.setText(tr("Verifying…"))
 
         def _done(info: object) -> None:
-            version = getattr(info, "version", "?")
-            self._core_hint.setText(f"Core: {version} at {getattr(info, 'path', '')}")
+            version = str(getattr(info, "version", "?"))
+            path = str(getattr(info, "path", ""))
+            self._core_hint.setText(
+                tr("Core verified: {version} at {path}").format(version=version, path=path)
+            )
+            self._set_core_hint_state("success")
+            self._status.setText(tr("Core verified successfully."))
             self._verify_button.setEnabled(True)
+            QMessageBox.information(
+                self,
+                tr("Core verified"),
+                f"{tr('The Mihomo core is usable.')}\n\n"
+                f"{tr('Version')}: {version}\n{tr('Path')}: {path}",
+            )
 
         def _failed(message: str) -> None:
-            self._core_hint.setText(f"Core not usable: {message}")
+            self._set_core_hint_state("error")
+            self._core_hint.setText(
+                tr("Core not usable: {error}").format(error=message)
+            )
             self._verify_button.setEnabled(True)
 
         self._services.runner.submit(
@@ -419,7 +559,8 @@ class SettingsPage(QWidget):
         self._download_button.setEnabled(False)
         self._progress.setVisible(True)
         self._progress.setValue(0)
-        self._core_hint.setText("Downloading the Mihomo core…")
+        self._set_core_hint_state("")
+        self._core_hint.setText(tr("Downloading the Mihomo core…"))
 
         def _progress(done: int, total: int) -> None:
             self.download_progress.emit(done, total)
@@ -427,6 +568,7 @@ class SettingsPage(QWidget):
         def _done(info: object) -> None:
             self._download_button.setEnabled(True)
             self._progress.setVisible(False)
+            self._set_core_hint_state("success")
             self._core_hint.setText(
                 f"Core {getattr(info, 'version', '')} installed at {getattr(info, 'path', '')}"
             )

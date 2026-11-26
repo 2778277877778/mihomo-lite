@@ -355,3 +355,107 @@ QPlainTextEdit#LogView {
     font-size: 12px;
     padding: 10px;
 }
+/* ---- trees and tables (downloads) ------------------------------------ */
+QTreeWidget, QTableWidget {
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 6px;
+    outline: none;
+    alternate-background-color: rgba(16, 21, 33, 0.02);
+}
+QTreeWidget::item, QTableWidget::item {
+    padding: 7px 9px;
+    border-radius: 9px;
+    color: rgba(16, 21, 33, 0.85);
+}
+QTreeWidget::item:hover, QTableWidget::item:hover {
+    background: rgba(255, 255, 255, 0.80);
+}
+QTreeWidget::item:selected, QTableWidget::item:selected {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 rgba(79, 123, 255, 0.20), stop:1 rgba(123, 107, 255, 0.14));
+    color: #101521;
+}
+QTreeWidget::item:disabled { color: rgba(16, 21, 33, 0.32); }
+QTreeWidget::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 1px solid rgba(16, 21, 33, 0.20);
+    background: rgba(255, 255, 255, 0.85);
+}
+QTreeWidget::indicator:hover { border-color: rgba(79, 123, 255, 0.65); }
+QTreeWidget::indicator:checked {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4f7bff, stop:1 #7b6bff);
+    border-color: rgba(79, 123, 255, 0.65);
+}
+QTreeWidget::indicator:disabled {
+    border-color: rgba(16, 21, 33, 0.08);
+    background: rgba(255, 255, 255, 0.45);
+}
+QHeaderView::section {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(16, 21, 33, 0.08);
+    padding: 5px 9px;
+    color: rgba(16, 21, 33, 0.50);
+    font-size: 11px;
+    font-weight: 600;
+}
+QHeaderView::section:hover { color: rgba(16, 21, 33, 0.72); }
+QTableCornerButton::section { background: transparent; border: none; }
+QFrame#ProfileCard {
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(16, 21, 33, 0.08);
+    border-radius: 16px;
+}
+QFrame#ProfileCard:hover {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(79, 123, 255, 0.35);
+}
+QFrame#ProfileCard[selected="true"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 rgba(79, 123, 255, 0.18), stop:1 rgba(123, 107, 255, 0.12));
+    border-color: rgba(79, 123, 255, 0.55);
+}
+QFrame#ProfileCard[active="true"] {
+    border-left: 3px solid #0f9d63;
+}
+QLabel#ProfileName {
+    font-size: 15px;
+    font-weight: 600;
+    color: #101521;
+}
+QLabel#ProfileMeta {
+    font-size: 11px;
+    color: rgba(16, 21, 33, 0.55);
+}
+QLabel#ProfileBadge {
+    background: rgba(16, 21, 33, 0.05);
+    border: 1px solid rgba(16, 21, 33, 0.10);
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: rgba(16, 21, 33, 0.55);
+}
+QLabel#ProfileBadgeActive {
+    background: rgba(15, 157, 99, 0.12);
+    border: 1px solid rgba(15, 157, 99, 0.30);
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #0f9d63;
+}
+QLabel#ProfileWarning {
+    font-size: 11px;
+    color: #b76e00;
+}
+QLabel#Hint[state="success"] {
+    color: #0f9d63;
+    font-weight: 600;
+}
+QLabel#Hint[state="error"] {
+    color: #d13438;
+}

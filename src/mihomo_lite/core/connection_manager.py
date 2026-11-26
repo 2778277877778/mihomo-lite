@@ -15,13 +15,15 @@ import sys
 import time
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from mihomo_lite.config.download_listeners import DownloadListener, allocate_download_listeners
 from mihomo_lite.config.generator import generate_runtime_config, write_runtime_config
 from mihomo_lite.config.validator import validate_config
+from mihomo_lite.core.download_catalog import DownloadCatalog
 from mihomo_lite.core.profile_manager import ProfileManager
 from mihomo_lite.core.state_manager import SettingsStore
 from mihomo_lite.core.traffic_monitor import TrafficMonitor
@@ -51,6 +53,7 @@ class SessionInfo:
     core_version: str
     started_at: float
     mode: str = "system"
+    download_listeners: tuple[DownloadListener, ...] = ()
 
     @property
     def api_base_url(self) -> str:
@@ -80,6 +83,7 @@ class ConnectionManager(QObject):
         proxy: SystemProxy | None = None,
         core: CoreManager | None = None,
         runner: TaskRunner | None = None,
+        catalog: DownloadCatalog | None = None,
         api_factory: Callable[..., MihomoAPI] = MihomoAPI,
         traffic: TrafficMonitor | None = None,
         parent: QObject | None = None,
@@ -92,6 +96,7 @@ class ConnectionManager(QObject):
         self._proxy = proxy or SystemProxy(paths.proxy_journal)
         self._core = core or CoreManager(paths, lambda: settings.current.core_path)
         self._runner = runner or TaskRunner(self)
+        self._catalog = catalog or DownloadCatalog(profiles)
         self._api_factory = api_factory
         self._traffic = traffic or TrafficMonitor(self)
 
@@ -101,6 +106,8 @@ class ConnectionManager(QObject):
         self._secret = ""
         self._mix_port = 0
         self._api_port = 0
+        self._dns_port = 0
+        self._download_listeners: tuple[DownloadListener, ...] = ()
         self._profile_name = ""
         self._generation = 0
         self._stop_reason: str | None = None
@@ -212,6 +219,14 @@ class ConnectionManager(QObject):
                 if isinstance(data.get("dns"), dict)
                 else None
             )
+            self._dns_port = dns_port or 0
+            download_listeners, extra_proxies = self._download_plan(
+                data,
+                settings,
+                mixed_port=mixed_port,
+                api_port=api_port,
+                avoid_ports={self._dns_port} if self._dns_port else None,
+            )
             secret = secrets.token_urlsafe(24)
             register_secret(secret)
             generated = generate_runtime_config(
@@ -225,8 +240,11 @@ class ConnectionManager(QObject):
                 tun_stack=settings.tun_stack,
                 tun_dns_hijack=settings.tun_dns_hijack,
                 dns_port=dns_port,
+                download_listeners=download_listeners or None,
+                extra_proxies=extra_proxies or None,
             )
             write_runtime_config(self._paths.runtime_config, generated)
+            self._download_listeners = download_listeners
             for note in generated.notes:
                 log.debug("config: %s", note)
         except (ConfigError, OSError, ValueError) as exc:
@@ -270,6 +288,30 @@ class ConnectionManager(QObject):
             on_error=lambda message: self._on_api_failed(token, message),
         )
 
+    def _download_plan(
+        self,
+        data: dict,
+        settings,
+        *,
+        mixed_port: int,
+        api_port: int,
+        avoid_ports: set[int] | None = None,
+    ):
+        """Return listeners and extra proxies for the multi-node download feature.
+
+        The whole branch is skipped unless both switches are on. When it is
+        skipped, the generator keeps its historical behaviour of removing every
+        listener from the runtime copy.
+        """
+        if not (settings.download_multithreaded and settings.download_multi_node):
+            return (), []
+        extras, names = self._catalog.resolve(settings.download_nodes, data)
+        if not names:
+            return (), []
+        avoid = {mixed_port, api_port} | set(avoid_ports or ())
+        listeners = allocate_download_listeners(names, avoid=avoid)
+        return listeners, extras
+
     def _on_api_ready(self, token: int, version: object) -> None:
         log.debug(
             "api ready callback: token=%s generation=%s state=%s",
@@ -310,6 +352,7 @@ class ConnectionManager(QObject):
             core_version=core_version,
             started_at=time.time(),
             mode=self._mode,
+            download_listeners=self._download_listeners,
         )
         self._write_session_file()
         self._set_state(ConnectionState.CONNECTED)
@@ -362,6 +405,13 @@ class ConnectionManager(QObject):
             result = validate_config(data)
             if not result.ok:
                 raise ConfigError("; ".join(result.errors))
+            download_listeners, extra_proxies = self._download_plan(
+                data,
+                settings,
+                mixed_port=self._mix_port,
+                api_port=self._api_port,
+                avoid_ports={self._dns_port} if self._dns_port else None,
+            )
             generated = generate_runtime_config(
                 data,
                 mixed_port=self._mix_port,
@@ -372,6 +422,8 @@ class ConnectionManager(QObject):
                 tun=self._mode == "tun",
                 tun_stack=settings.tun_stack,
                 tun_dns_hijack=settings.tun_dns_hijack,
+                download_listeners=download_listeners or None,
+                extra_proxies=extra_proxies or None,
             )
             write_runtime_config(self._paths.runtime_config, generated)
         except (ConfigError, OSError, ValueError) as exc:
@@ -382,10 +434,28 @@ class ConnectionManager(QObject):
         self._runner.submit(
             api.reload_config,
             args=(str(self._paths.runtime_config),),
-            on_success=lambda _result: self.warning.emit("The active profile was reloaded."),
+            on_success=lambda _result: self._on_reload_succeeded(download_listeners),
             on_error=lambda message: self.warning.emit(f"Core reload failed: {message}"),
         )
         return True
+
+    def reload_download_config(self) -> bool:
+        """Regenerate the runtime copy after the download switches changed."""
+        if not self.is_connected:
+            return False
+        return self.reload_active_config()
+
+    def _on_reload_succeeded(self, listeners: tuple[DownloadListener, ...]) -> None:
+        self._apply_download_listeners(listeners)
+        self.warning.emit("The active profile was reloaded.")
+
+    def _apply_download_listeners(self, listeners: tuple[DownloadListener, ...]) -> None:
+        self._download_listeners = tuple(listeners)
+        if self._session is None:
+            return
+        self._session = replace(self._session, download_listeners=self._download_listeners)
+        self._write_session_file()
+        self.session_changed.emit(self._session)
 
     def _on_api_failed(self, token: int, message: str) -> None:
         if token != self._generation:
@@ -486,6 +556,8 @@ class ConnectionManager(QObject):
         self._traffic.stop()
         self._close_api()
         self._clear_session_file()
+        self._download_listeners = ()
+        self._dns_port = 0
         self._session = None
         self.session_changed.emit(None)
         if self._state is not ConnectionState.ERROR:
@@ -494,6 +566,7 @@ class ConnectionManager(QObject):
     def _fail(self, message: str) -> None:
         log.error("%s", message)
         self._stop_reason = None
+        self._download_listeners = ()
         self._set_state(ConnectionState.ERROR)
         self.error_changed.emit(message)
 
@@ -509,16 +582,21 @@ class ConnectionManager(QObject):
             pid = self._process.pid
         if not pid and not self._mix_port:
             return
+        payload: dict[str, object] = {
+            "pid": int(pid or 0),
+            "mixed_port": self._mix_port,
+            "api_port": self._api_port,
+            "started_at": time.time(),
+        }
+        # Keep the on-disk journal byte-compatible with older versions when the
+        # optional download listeners are not in use.
+        if self._download_listeners:
+            payload["download_listeners"] = [
+                {"name": listener.name, "node": listener.node, "port": listener.port}
+                for listener in self._download_listeners
+            ]
         try:
-            atomic_write_json(
-                self._paths.session_file,
-                {
-                    "pid": int(pid or 0),
-                    "mixed_port": self._mix_port,
-                    "api_port": self._api_port,
-                    "started_at": time.time(),
-                },
-            )
+            atomic_write_json(self._paths.session_file, payload)
         except OSError as exc:
             log.debug("cannot write session file: %s", exc)
 
@@ -552,6 +630,8 @@ class ConnectionManager(QObject):
         except Exception:  # noqa: BLE001
             pass
         self._clear_session_file()
+        self._download_listeners = ()
+        self._dns_port = 0
         self._session = None
         self.session_changed.emit(None)
         self._set_state(ConnectionState.STOPPED)
@@ -577,5 +657,7 @@ class ConnectionManager(QObject):
         except Exception:  # noqa: BLE001
             pass
         self._clear_session_file()
+        self._download_listeners = ()
+        self._dns_port = 0
         self._session = None
         self._state = ConnectionState.STOPPED

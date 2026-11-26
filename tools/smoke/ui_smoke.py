@@ -23,7 +23,9 @@ window.resize(1000, 680)
 window.show()
 QApplication.processEvents()
 
-for index, name in enumerate(("dashboard", "traffic", "proxies", "profiles", "settings", "logs")):
+for index, name in enumerate(
+    ("dashboard", "traffic", "downloads", "proxies", "profiles", "settings", "logs")
+):
     window.show_page(index)
     QApplication.processEvents()
     window.grab().save(str(OUT / f"ui_{name}.png"))

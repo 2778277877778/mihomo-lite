@@ -87,7 +87,8 @@ Hardening in config/generator.py:
 - allow-lan false, bind-address 127.0.0.1
 - tun.enable false (v0.1 has no TUN)
 - port / socks-port / redir-port / tproxy-port all 0
-- listeners removed
+- listeners from the imported profile are removed (the optional multi-node download
+  feature may add its own loopback listeners, see below)
 - DNS listen forced to localhost when it is not already
 - profile.store-selected true
 
@@ -110,6 +111,31 @@ subscriptions that are older than the configured interval (1-48 h). Updates run 
 time through TaskRunner, keep the previous file as previous.yaml, validate the new content
 before replacing it, and never interrupt a running connection. The active profile is
 announced after an update so the UI can ask for a reconnect.
+
+## Optional download acceleration
+
+Downloads are opt-in accelerations on top of the ordinary single-threaded downloader. Both
+switches default to off, and multi-node requires multi-threaded.
+
+~~~text
+ui/download_page.py -> core/download_manager.py (Qt adapter, worker thread)
+                         |
+                    mihomo_lite/download/ (pure Python, no Qt)
+                    plan -> segments -> resume -> transport (httpx through a loopback port)
+~~~
+
+- The engine only talks HTTP through `127.0.0.1:<mixed-port>` or a per-node listener port.
+  It never calls the controller, never reads the API secret and never implements a VPN.
+- Multi-threaded mode probes with HEAD, checks `Accept-Ranges`, preallocates the target and
+  writes each range at its offset. Idle workers split the longest segment; failed segments
+  retry with exponential backoff (5 attempts). ETag/Last-Modified and segment progress live in
+  a sidecar JSON file for resume.
+- Multi-node mode is the only feature allowed to add listeners. The generator replaces any
+  listeners from the imported profile with one `mixed` listener per selected node, bound to
+  `127.0.0.1` and pinned through the listener `proxy` field. It never writes the imported file.
+- When both switches are off, `ConnectionManager._download_plan()` returns immediately: no
+  catalogue scan, no port allocation, no extra proxies, no `listeners` key. The generated
+  runtime YAML stays byte-for-byte identical to the pre-feature output.
 
 ## System proxy safety
 

@@ -41,6 +41,7 @@ from mihomo_lite.models.app_state import ConnectionState
 from mihomo_lite.system import elevation
 from mihomo_lite.ui import glass
 from mihomo_lite.ui.dashboard import DashboardPage
+from mihomo_lite.ui.download_page import DownloadPage
 from mihomo_lite.ui.icon import app_icon
 from mihomo_lite.ui.logs_page import LogsPage
 from mihomo_lite.ui.profile_page import ProfilePage
@@ -53,7 +54,7 @@ from mihomo_lite.ui.widgets.toggle import ToggleSwitch
 
 log = logging.getLogger(__name__)
 
-_NAV = ("Dashboard", "Traffic", "Proxies", "Profiles", "Settings", "Logs")
+_NAV = ("Dashboard", "Traffic", "Downloads", "Proxies", "Profiles", "Settings", "Logs")
 _HT = {
     "client": 1,
     "caption": 2,
@@ -168,6 +169,7 @@ class MainWindow(QMainWindow):
         self._services = services
         self._tray = tray
         self._force_quit = False
+        self._minimize_notified = False
         self._backdrop = glass.AuroraBackdrop(services.settings.current.theme)
 
         self.setWindowTitle(__app_name__)
@@ -203,6 +205,7 @@ class MainWindow(QMainWindow):
         self._factories = [
             lambda: DashboardPage(self._services),
             lambda: TrafficPage(self._services),
+            lambda: DownloadPage(self._services),
             lambda: ProxyPage(self._services),
             lambda: ProfilePage(self._services),
             lambda: SettingsPage(self._services),
@@ -320,9 +323,16 @@ class MainWindow(QMainWindow):
         if not 0 <= index < len(self._factories):
             return None
         page = self._factories[index]()
-        if index == 4:  # SettingsPage emits theme changes
+        if isinstance(page, SettingsPage):  # SettingsPage emits theme changes
             page.theme_changed.connect(self.apply_theme)
+            page.open_downloads_requested.connect(self._open_downloads_page)
+        if isinstance(page, DownloadPage):
+            page.open_settings_requested.connect(self._open_settings_page)
         i18n.translate_widget_tree(page)
+        # Pages are lazy, so toggles built after apply_theme() need the current
+        # theme applied here instead of waiting for the next theme change.
+        for toggle in page.findChildren(ToggleSwitch):
+            toggle.set_theme(self._services.settings.current.theme)
         self._pages[index] = page
         self._stack.addWidget(page)
         return page
@@ -350,6 +360,12 @@ class MainWindow(QMainWindow):
     def show_page(self, index: int) -> None:
         if 0 <= index < self._nav.count():
             self._nav.setCurrentRow(index)
+
+    def _open_downloads_page(self) -> None:
+        self.show_page(_NAV.index("Downloads"))
+
+    def _open_settings_page(self) -> None:
+        self.show_page(_NAV.index("Settings"))
 
     def toggle_maximised(self) -> None:
         if self.isMaximized():
@@ -491,4 +507,11 @@ class MainWindow(QMainWindow):
             and self._tray.available()
         ):
             self.hide()
+            self._tray.show()
+            if not self._minimize_notified:
+                self._tray.notify(
+                    tr("Mihomo Lite is still running"),
+                    tr("The window is in the tray. Click the tray icon to reopen it."),
+                )
+                self._minimize_notified = True
         super().changeEvent(event)

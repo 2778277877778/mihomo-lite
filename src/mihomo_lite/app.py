@@ -14,6 +14,8 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mihomo_lite import __app_id__, __app_name__, __version__, i18n
 from mihomo_lite.core.connection_manager import ConnectionManager
+from mihomo_lite.core.download_catalog import DownloadCatalog
+from mihomo_lite.core.download_manager import DownloadManager
 from mihomo_lite.core.profile_manager import ProfileManager
 from mihomo_lite.core.proxy_manager import ProxyManager
 from mihomo_lite.core.services import Services
@@ -85,6 +87,7 @@ class MihomoLiteApp:
 
         self.runner = TaskRunner()
         self.profiles = ProfileManager(self.paths)
+        self.catalog = DownloadCatalog(self.profiles)
         self.core = CoreManager(self.paths, lambda: self.settings.current.core_path)
         self.traffic = TrafficMonitor()
         self.connection = ConnectionManager(
@@ -94,7 +97,9 @@ class MihomoLiteApp:
             core=self.core,
             runner=self.runner,
             traffic=self.traffic,
+            catalog=self.catalog,
         )
+        self.download = DownloadManager(self.settings, self.connection)
         self.proxy = ProxyManager(lambda: self.connection.api, self.runner)
         self.stats = TrafficStats(self.paths, self.traffic)
         self.updates = UpdateScheduler(self.settings, self.profiles, self.runner)
@@ -105,6 +110,8 @@ class MihomoLiteApp:
             connection=self.connection,
             proxy=self.proxy,
             core=self.core,
+            catalog=self.catalog,
+            download=self.download,
             runner=self.runner,
             traffic=self.traffic,
             stats=self.stats,
@@ -120,7 +127,7 @@ class MihomoLiteApp:
             # page can be constructed inside the frozen executable.
             self.window.show()
             self.qt.processEvents()
-            for index in range(5):
+            for index in range(self.window._nav.count()):
                 self.window.show_page(index)
                 self.qt.processEvents()
             try:
@@ -200,6 +207,7 @@ class MihomoLiteApp:
             pass
         self.updates.stop()
         self.stats.flush()
+        self.download.cancel()
         self.connection.shutdown()
         self.single.release()
 
