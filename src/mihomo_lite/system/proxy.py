@@ -14,6 +14,7 @@ from __future__ import annotations
 import ctypes
 import logging
 import os
+import socket
 import sys
 import time
 from ctypes import wintypes
@@ -47,6 +48,61 @@ INTERNET_PER_CONN_PROXY_BYPASS = 3
 INTERNET_PER_CONN_AUTOCONFIG_URL = 4
 
 _REG_PATH = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+
+# Windows' dynamic port range starts here. Mihomo Lite picks its mixed port
+# from this range, so a dead loopback endpoint in this range is almost always
+# a leftover from a previous session rather than the user's real proxy.
+_EPHEMERAL_PORT_START = 49152
+
+
+def _loopback_endpoint(server: str) -> tuple[str, int] | None:
+    host, _, raw_port = server.strip().rpartition(":")
+    host = host.strip("[]").strip().lower()
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        return None
+    try:
+        port = int(raw_port)
+    except ValueError:
+        return None
+    if not 1 <= port <= 65535:
+        return None
+    return host, port
+
+
+def _loopback_alive(server: str, timeout: float = 0.25) -> bool:
+    endpoint = _loopback_endpoint(server)
+    if endpoint is None:
+        return False
+    host, port = endpoint
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def _usable_snapshot(state: ProxyState) -> ProxyState:
+    """Do not restore a dead ephemeral loopback proxy left by an old session.
+
+    A hard-killed instance can leave the Windows proxy pointing at a random
+    mixed port. Preserving that as the "previous" value would permanently break
+    the browser after the next normal disconnect, so use direct instead.
+    """
+    if not state.enabled:
+        return state
+    endpoint = _loopback_endpoint(state.server)
+    if endpoint is None:
+        return state
+    _host, port = endpoint
+    if port < _EPHEMERAL_PORT_START:
+        return state
+    if _loopback_alive(state.server):
+        return state
+    log.warning(
+        "previous system proxy %s is a dead loopback endpoint; restoring direct instead",
+        state.server,
+    )
+    return state.disabled()
 
 
 @dataclass(frozen=True)
@@ -346,7 +402,7 @@ class SystemProxy:
         """Point the system proxy at *server*, journaling the previous state."""
         previous = self._backend.read()
         if not self._journal_path.exists():
-            self._write_journal(previous)
+            self._write_journal(_usable_snapshot(previous))
         applied = previous.with_proxy(server, bypass)
         try:
             self._backend.write(applied)
@@ -375,6 +431,7 @@ class SystemProxy:
             self.clear_journal()
             return False
 
+        snapshot = _usable_snapshot(snapshot)
         self._backend.write(snapshot)
         self.clear_journal()
         log.info("system proxy restored (%s)", snapshot.server or "direct")
@@ -400,10 +457,21 @@ class SystemProxy:
         except (TypeError, ValueError):
             self.clear_journal()
             return "corrupt"
+        snapshot = _usable_snapshot(snapshot)
         self._backend.write(snapshot)
         self.clear_journal()
         log.warning("recovered system proxy left behind by pid %s", owner)
         return "restored"
+
+    def repair_stale_loopback(self) -> bool:
+        """Clear a dead ephemeral loopback proxy left without a journal."""
+        current = self._backend.read()
+        fixed = _usable_snapshot(current)
+        if fixed == current:
+            return False
+        self._backend.write(fixed)
+        log.warning("cleared a stale loopback system proxy (%s)", current.server)
+        return True
 
     def owns_system_proxy(self) -> bool:
         return self._journal_path.exists()

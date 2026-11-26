@@ -152,6 +152,11 @@ class ConnectionManager(QObject):
             )
         elif result == "corrupt":
             self.warning.emit("A damaged proxy recovery record was found and discarded.")
+        elif result == "none" and self._proxy.repair_stale_loopback():
+            self.warning.emit(
+                "A stale local proxy setting was cleared; the Windows proxy is direct again."
+            )
+            result = "repaired"
         self._reap_orphan_core()
         return result
 

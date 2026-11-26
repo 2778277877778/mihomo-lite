@@ -55,6 +55,53 @@ def test_restore_returns_the_original_state(paths):
     assert proxy.restore() is False
 
 
+def test_dead_ephemeral_loopback_snapshot_becomes_direct(paths, monkeypatch):
+    monkeypatch.setattr("mihomo_lite.system.proxy._loopback_alive", lambda _server: False)
+    original = ProxyState(flags=PROXY_TYPE_PROXY, server="127.0.0.1:49774")
+    backend = FakeBackend(original)
+    proxy = make_proxy(paths, backend)
+
+    proxy.apply("127.0.0.1:50000")
+    assert proxy.restore() is True
+
+    assert not backend.state.enabled
+    assert backend.state.server == ""
+
+
+def test_dead_ephemeral_journal_is_not_restored(paths, monkeypatch):
+    monkeypatch.setattr("mihomo_lite.system.proxy._loopback_alive", lambda _server: False)
+    original = ProxyState(flags=PROXY_TYPE_PROXY, server="127.0.0.1:49774")
+    backend = FakeBackend(original)
+    make_proxy(paths, backend, pid=333).apply("127.0.0.1:50000")
+
+    restarted = make_proxy(paths, backend, pid=444, checker=lambda _pid: False)
+    assert restarted.recover_if_stale() == "restored"
+    assert not backend.state.enabled
+    assert backend.state.server == ""
+
+
+def test_conventional_loopback_proxy_is_still_restored(paths, monkeypatch):
+    monkeypatch.setattr("mihomo_lite.system.proxy._loopback_alive", lambda _server: False)
+    original = ProxyState(flags=PROXY_TYPE_PROXY, server="127.0.0.1:7897")
+    backend = FakeBackend(original)
+    proxy = make_proxy(paths, backend)
+
+    proxy.apply("127.0.0.1:50000")
+    proxy.restore()
+
+    assert backend.state == original
+
+
+def test_repair_stale_loopback_clears_a_dead_proxy(paths, monkeypatch):
+    monkeypatch.setattr("mihomo_lite.system.proxy._loopback_alive", lambda _server: False)
+    backend = FakeBackend(ProxyState(flags=PROXY_TYPE_PROXY, server="127.0.0.1:49774"))
+    proxy = make_proxy(paths, backend)
+
+    assert proxy.repair_stale_loopback() is True
+    assert not backend.state.enabled
+    assert proxy.repair_stale_loopback() is False
+
+
 def test_second_apply_keeps_the_first_snapshot(paths):
     original = ProxyState(flags=PROXY_TYPE_PROXY, server="127.0.0.1:7897")
     backend = FakeBackend(original)
