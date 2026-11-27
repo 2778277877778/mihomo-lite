@@ -95,6 +95,18 @@ single-threaded path.
 Open **Proxies** while connected. Pick a policy group on the left, then either double-click a
 node or use **Use selected node**. **Test latency** runs a delay test for the group.
 
+## 5.1 Test every node and switch back
+
+In **Proxies**:
+
+- **Test all nodes** latency-tests every loaded node (across all groups), shows progress and
+  updates the per-node delay as results arrive. After the batch it sorts the current group by
+  latency; **Sort by latency** can be toggled manually.
+- **Previous node** switches back to the node you used before the current one in the selected
+  group. Clicking it again toggles between the two most recent nodes. The memory is per group
+  and is kept across restarts.
+- **Speed test** is still the throughput (Mbit/s) test for one selected node.
+
 ## 6. Tray and autostart
 
 - Closing the window keeps the app in the tray by default; the proxy keeps working.
