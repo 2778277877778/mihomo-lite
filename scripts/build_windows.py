@@ -59,6 +59,49 @@ def _core_version(binary: Path) -> str:
     return text.splitlines()[0] if text else "unknown"
 
 
+def _download_core_archive(archive: Path) -> None:
+    """Download the pinned core, bypassing a broken runner/CI proxy if needed."""
+    errors: list[str] = []
+
+    def _direct_urllib() -> None:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        request = urllib.request.Request(
+            CORE_DOWNLOAD_URL, headers={"User-Agent": "MihomoLite-build"}
+        )
+        with opener.open(request, timeout=120) as response, archive.open("wb") as target:
+            shutil.copyfileobj(response, target, length=1024 * 256)
+
+    def _httpx(trust_env: bool) -> None:
+        import httpx
+
+        with (
+            httpx.Client(follow_redirects=True, timeout=120.0, trust_env=trust_env) as client,
+            client.stream("GET", CORE_DOWNLOAD_URL) as response,
+        ):
+            response.raise_for_status()
+            with archive.open("wb") as target:
+                for chunk in response.iter_bytes(chunk_size=1024 * 256):
+                    target.write(chunk)
+
+    for label, download in (
+        ("urllib-direct", _direct_urllib),
+        ("httpx-direct", lambda: _httpx(False)),
+        ("httpx-env", lambda: _httpx(True)),
+    ):
+        archive.unlink(missing_ok=True)
+        try:
+            download()
+        except Exception as exc:  # noqa: BLE001 - try the next route
+            errors.append(f"{label}: {type(exc).__name__}: {exc}")
+            print(f"core download via {label} failed: {exc}")
+            continue
+        if archive.exists() and archive.stat().st_size > 0:
+            print(f"core downloaded via {label}")
+            return
+    archive.unlink(missing_ok=True)
+    raise SystemExit("could not download the Mihomo core: " + " | ".join(errors))
+
+
 def ensure_local_core() -> Path:
     """Return a usable core binary, downloading the pinned release if needed."""
     extracted = CORE_CACHE / "extracted" / CORE_ASSET_NAME
@@ -75,7 +118,7 @@ def ensure_local_core() -> Path:
             archive.unlink(missing_ok=True)
     if not archive.exists():
         print(f"downloading {CORE_DOWNLOAD_URL}")
-        urllib.request.urlretrieve(CORE_DOWNLOAD_URL, archive)  # noqa: S310 - pinned https URL
+        _download_core_archive(archive)
         verify_sha256(archive, CORE_SHA256, label="core archive")
 
     with zipfile.ZipFile(archive) as zf:
