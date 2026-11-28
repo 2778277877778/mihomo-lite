@@ -159,6 +159,7 @@ class DownloadEngine:
         """
         emit = on_snapshot if on_snapshot is not None else _ignore_snapshot
         stop = cancel if cancel is not None else threading.Event()
+        context: _Run | None = None
         try:
             context = self._new_run(options, emit, stop)
             head = self._probe_head(context)
@@ -197,6 +198,11 @@ class DownloadEngine:
                 ok=False,
                 error=str(exc) or "download failed",
             )
+        finally:
+            if context is not None:
+                close = getattr(context.transport, "close", None)
+                if callable(close):
+                    close()
 
     # -- probing -----------------------------------------------------------
     def _new_run(

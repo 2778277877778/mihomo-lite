@@ -124,6 +124,8 @@ class ProfilePage(QWidget):
         self._services = services
         self._cards: dict[str, ProfileCard] = {}
         self._selected_id = ""
+        self._rule_cache: dict[str, tuple[float, str]] = {}
+        self._rule_generation = 0
         self._build()
         services.profiles.profiles_changed.connect(self._reload)
         services.profiles.active_changed.connect(lambda _p: self._reload())
@@ -276,6 +278,7 @@ class ProfilePage(QWidget):
     def _update_details(self) -> None:
         profile = self._selected_profile()
         if profile is None:
+            self._rule_generation += 1
             self._details.setText(tr("No profile selected."))
             self._rule_hint.setText("")
             self._activate_button.setEnabled(False)
@@ -299,12 +302,51 @@ class ProfilePage(QWidget):
                 note = note[:177] + "…"
             lines.append(f"{tr('Notes')}: {note}")
         self._details.setText("<br>".join(lines))
-        rule_text = self._describe_rules(profile)
-        self._rule_hint.setText(rule_text.splitlines()[0] if rule_text else "")
-        self._rule_hint.setToolTip(rule_text)
+        self._refresh_rule_hint(profile)
         self._activate_button.setEnabled(not active)
         self._refresh_button.setEnabled(profile.kind is ProfileKind.SUBSCRIPTION)
         self._delete_button.setEnabled(True)
+
+    def _refresh_rule_hint(self, profile: Profile) -> None:
+        """Show the cached rule result, or run the checker off the UI thread."""
+        cached = self._rule_cache.get(profile.id)
+        if cached is not None and cached[0] == profile.updated_at:
+            self._show_rule(cached[1])
+            return
+
+        self._rule_generation += 1
+        token = self._rule_generation
+        self._rule_hint.setText(tr("Rule check: checking…"))
+        self._rule_hint.setToolTip("")
+        runner = getattr(self._services, "runner", None)
+        if runner is None or not hasattr(runner, "submit"):
+            result = self._describe_rules(profile)
+            self._rule_cache[profile.id] = (profile.updated_at, result)
+            self._show_rule(result)
+            return
+
+        def done(text: object) -> None:
+            if token != self._rule_generation or self._selected_id != profile.id:
+                return
+            result = str(text)
+            self._rule_cache[profile.id] = (profile.updated_at, result)
+            self._show_rule(result)
+
+        def failed(message: str) -> None:
+            if token != self._rule_generation or self._selected_id != profile.id:
+                return
+            self._show_rule(f"Rule check unavailable: {message}")
+
+        runner.submit(
+            self._describe_rules,
+            args=(profile,),
+            on_success=done,
+            on_error=failed,
+        )
+
+    def _show_rule(self, text: str) -> None:
+        self._rule_hint.setText(text.splitlines()[0] if text else "")
+        self._rule_hint.setToolTip(text)
 
     def _describe_rules(self, profile: Profile) -> str:
         """Run the rule checker on the stored file, so problems show before Connect."""

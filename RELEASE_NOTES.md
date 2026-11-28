@@ -1,4 +1,4 @@
-# Mihomo Lite v0.6.1
+# Mihomo Lite v0.6.2
 
 Optional accelerated downloads, with both features off by default.
 
@@ -6,6 +6,11 @@ Optional accelerated downloads, with both features off by default.
 
 ### What changed
 
+- **Performance and responsiveness.** Profile rule checks now run in the background and are
+  cached per profile update, so switching profiles no longer blocks the window. Batch node
+  latency results coalesce list repaints instead of rebuilding the node list for every result.
+  Multi-threaded downloads reuse one HTTP client per node instead of opening a new connection
+  for each range request.
 - **Fix: browser had no network after a killed/leftover session.** If Windows was left pointing
   at a dead ephemeral loopback proxy (for example `127.0.0.1:49774` from an old mixed port),
   the app used to preserve and restore that dead value on the next disconnect. Such snapshots
@@ -54,18 +59,21 @@ Optional accelerated downloads, with both features off by default.
 
 ### Verify
 
-- All existing tests plus the new download tests pass: `pytest` (239 tests).
+- All existing tests plus the new download tests pass: `pytest` (242 tests).
 - `ruff check src tests` is clean.
 - Listener syntax was checked against the bundled core (Mihomo v1.19.33) and a real core was
   started to confirm `name/type: mixed/listen: 127.0.0.1/port/proxy` binds correctly.
 
-Download `MihomoLite-Setup-0.6.1-x64.exe` or `MihomoLite-0.6.1-portable-x64.zip`.
+Download `MihomoLite-Setup-0.6.2-x64.exe` or `MihomoLite-0.6.2-portable-x64.zip`.
 Windows 10/11 x64; the installer is not code-signed yet.
 
 ## 中文
 
 ### 本次更新
 
+- **性能与响应速度优化。** 配置页的规则检查改为后台执行并按配置更新缓存，切换配置不再卡住窗口；
+  全部节点测延迟时合并列表刷新，不再每个结果都重建节点列表；多线程下载按节点复用 HTTP 连接，
+  不再为每个分段重新建连。
 - **修复：异常退出后浏览器没网。** 如果 Windows 系统代理被上一次会话留在了一个已经失效的
   临时本地端口（例如旧 mixed 端口 `127.0.0.1:49774`），之前会把这个死端口当成“原始代理”
   在断开时恢复。现在这类快照会按直连处理，启动恢复也会自动清除残留值。
@@ -101,10 +109,10 @@ Windows 10/11 x64; the installer is not code-signed yet.
 
 ### 验证
 
-- 原有测试与新增下载测试全部通过：`pytest`（239 个测试）。
+- 原有测试与新增下载测试全部通过：`pytest`（242 个测试）。
 - `ruff check src tests` 无报错。
 - listeners 写法已对照内置内核（Mihomo v1.19.33）的官方文档与源码，并用真实内核启动验证
   `name/type: mixed/listen: 127.0.0.1/port/proxy` 能正常绑定。
 
-下载 `MihomoLite-Setup-0.6.1-x64.exe` 或 `MihomoLite-0.6.1-portable-x64.zip`。
+下载 `MihomoLite-Setup-0.6.2-x64.exe` 或 `MihomoLite-0.6.2-portable-x64.zip`。
 支持 Windows 10/11 x64，安装包暂未签名。

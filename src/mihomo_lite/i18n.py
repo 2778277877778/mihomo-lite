@@ -117,6 +117,7 @@ ZH: dict[str, str] = {
     "Local file": "本地文件",
     "Subscription": "订阅",
     "Rule check": "规则检查",
+    "Rule check: checking…": "规则检查：检查中…",
     # settings
     "Changes are saved locally in your user profile.": "设置保存在你的用户目录中。",
     "Download core (≈22 MB)": "下载内核（约 22 MB）",

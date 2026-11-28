@@ -7,6 +7,7 @@ so environment proxy variables never bypass the mihomo mixed-port.
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Iterator
 from typing import Protocol
 
@@ -83,17 +84,41 @@ def _parse_content_range(value: str, start: int, end: int) -> None:
 
 
 class HttpxTransport(Transport):
-    """HTTP transport that always goes through a loopback mixed-port."""
+    """HTTP transport that always goes through a loopback mixed-port.
+
+    One client is reused per proxy port so multi-threaded downloads keep their
+    TLS connections instead of paying a handshake for every range request.
+    """
 
     def __init__(self, *, timeout: float = DEFAULT_TIMEOUT) -> None:
         self._timeout = timeout
+        self._clients: dict[int, httpx.Client] = {}
+        self._lock = threading.Lock()
+
+    def _client(self, proxy_port: int) -> httpx.Client:
+        with self._lock:
+            client = self._clients.get(proxy_port)
+            if client is None:
+                client = _client(proxy_port, self._timeout)
+                self._clients[proxy_port] = client
+            return client
+
+    def close(self) -> None:
+        with self._lock:
+            clients = list(self._clients.values())
+            self._clients.clear()
+        for client in clients:
+            try:
+                client.close()
+            except Exception:  # noqa: BLE001 - best-effort cleanup
+                log.debug("could not close a download client", exc_info=True)
 
     def head(self, url: str, proxy_port: int) -> HeadInfo:
-        with _client(proxy_port, self._timeout) as client:
-            try:
-                response = client.head(url)
-            except httpx.HTTPError as exc:
-                raise NodeFailed(f"HEAD request failed: {type(exc).__name__}") from exc
+        client = self._client(proxy_port)
+        try:
+            response = client.head(url)
+        except httpx.HTTPError as exc:
+            raise NodeFailed(f"HEAD request failed: {type(exc).__name__}") from exc
         status = response.status_code
         if status in _THROTTLE_STATUSES:
             raise HttpStatusError(status, f"HEAD returned HTTP {status}")
@@ -138,38 +163,38 @@ class HttpxTransport(Transport):
             headers["If-Range"] = etag
         elif last_modified:
             headers["If-Range"] = last_modified
-        with _client(proxy_port, self._timeout) as client:
-            try:
-                with client.stream("GET", url, headers=headers) as response:
-                    status = response.status_code
-                    if status in _THROTTLE_STATUSES:
-                        raise HttpStatusError(status, f"range request returned HTTP {status}")
-                    if status >= 500:
-                        raise NodeFailed(f"range request returned HTTP {status}")
-                    if status != 206:
-                        raise RangeNotSupported(f"expected HTTP 206 for a range request, got {status}")
-                    _parse_content_range(
-                        response.headers.get("content-range", ""), start, end
-                    )
-                    for chunk in response.iter_bytes():
-                        if chunk:
-                            yield chunk
-            except httpx.HTTPError as exc:
-                raise NodeFailed(f"range request failed: {type(exc).__name__}") from exc
+        client = self._client(proxy_port)
+        try:
+            with client.stream("GET", url, headers=headers) as response:
+                status = response.status_code
+                if status in _THROTTLE_STATUSES:
+                    raise HttpStatusError(status, f"range request returned HTTP {status}")
+                if status >= 500:
+                    raise NodeFailed(f"range request returned HTTP {status}")
+                if status != 206:
+                    raise RangeNotSupported(f"expected HTTP 206 for a range request, got {status}")
+                _parse_content_range(
+                    response.headers.get("content-range", ""), start, end
+                )
+                for chunk in response.iter_bytes():
+                    if chunk:
+                        yield chunk
+        except httpx.HTTPError as exc:
+            raise NodeFailed(f"range request failed: {type(exc).__name__}") from exc
 
     def get_full(self, url: str, proxy_port: int) -> Iterator[bytes]:
-        with _client(proxy_port, self._timeout) as client:
-            try:
-                with client.stream("GET", url) as response:
-                    status = response.status_code
-                    if status in _THROTTLE_STATUSES:
-                        raise HttpStatusError(status, f"GET returned HTTP {status}")
-                    if status >= 500:
-                        raise NodeFailed(f"GET returned HTTP {status}")
-                    if status < 200 or status >= 300:
-                        raise HttpStatusError(status, f"GET returned HTTP {status}")
-                    for chunk in response.iter_bytes():
-                        if chunk:
-                            yield chunk
-            except httpx.HTTPError as exc:
-                raise NodeFailed(f"GET request failed: {type(exc).__name__}") from exc
+        client = self._client(proxy_port)
+        try:
+            with client.stream("GET", url) as response:
+                status = response.status_code
+                if status in _THROTTLE_STATUSES:
+                    raise HttpStatusError(status, f"GET returned HTTP {status}")
+                if status >= 500:
+                    raise NodeFailed(f"GET returned HTTP {status}")
+                if status < 200 or status >= 300:
+                    raise HttpStatusError(status, f"GET returned HTTP {status}")
+                for chunk in response.iter_bytes():
+                    if chunk:
+                        yield chunk
+        except httpx.HTTPError as exc:
+            raise NodeFailed(f"GET request failed: {type(exc).__name__}") from exc

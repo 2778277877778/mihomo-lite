@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -35,6 +35,10 @@ class ProxyPage(QWidget):
         self._stats: dict[str, dict[str, int]] = {}
         self._current_group: str = ""
         self._history: dict[str, str] = dict(services.settings.current.last_proxy_nodes)
+        self._render_timer = QTimer(self)
+        self._render_timer.setSingleShot(True)
+        self._render_timer.setInterval(80)
+        self._render_timer.timeout.connect(self._render_nodes)
         self._build()
 
         services.proxy.groups_updated.connect(self._on_groups)
@@ -133,7 +137,11 @@ class ProxyPage(QWidget):
     def _on_stats(self, stats: object) -> None:
         if isinstance(stats, dict):
             self._stats = dict(stats)
-            self._render_nodes()
+            self._schedule_render()
+
+    def _schedule_render(self) -> None:
+        if not self._render_timer.isActive():
+            self._render_timer.start()
 
     def _rebuild_chips(self) -> None:
         for button in self._chip_group.buttons():
@@ -202,6 +210,7 @@ class ProxyPage(QWidget):
         return f"{name}    {value} ms{suffix}"
 
     def _render_nodes(self) -> None:
+        self._render_timer.stop()
         group = self._group()
         self._node_list.clear()
         if group is None:

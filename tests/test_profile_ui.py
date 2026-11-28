@@ -103,6 +103,23 @@ def test_profile_page_renders_one_card_per_profile(qtbot):
     assert page._cards["p2"].property("selected") == "true"
 
 
+def test_rule_check_result_is_cached(qtbot, monkeypatch):
+    page, _profiles = _page(qtbot)
+    profile = page._services.profiles.get("p1")
+    assert profile is not None
+    calls: list[str] = []
+    original = page._describe_rules
+
+    def counted(item):
+        calls.append(item.id)
+        return original(item)
+
+    monkeypatch.setattr(page, "_describe_rules", counted)
+    page._refresh_rule_hint(profile)
+    page._refresh_rule_hint(profile)
+    assert calls == ["p1"]
+
+
 def test_clicking_a_profile_card_selects_it(qtbot):
     page, _profiles = _page(qtbot)
     card = page._cards["p1"]

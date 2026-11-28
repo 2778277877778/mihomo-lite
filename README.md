@@ -44,7 +44,10 @@ switches nodes, points the Windows system proxy at it, and puts everything back 
 - Proxies page with group chips, one-click node switching, a batch latency test across every
   loaded node, sort-by-latency, and a per-group "Previous node" button that survives restarts
 - Profiles page with glass cards for multiple subscriptions (active/selected badges, compact
-  details), and a tray notification when minimising to the tray
+  details), background rule checks with per-update caching, and a tray notification when
+  minimising to the tray
+- Smoother batch latency testing (coalesced list repaints) and multi-threaded downloads that
+  reuse one HTTP connection per node instead of reconnecting for every segment
 - Dashboard shows the current node, latency and jitter, session usage, LAN IP,
   a live public-IP monitor and a Rule/Global/Direct outbound switch
 - Latency fluctuation chart (last 60 samples, average and jitter)
@@ -93,7 +96,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # run
-pytest                         # 239 tests
+pytest                         # 242 tests
 ruff check src tests           # lint
 ```
 
@@ -168,7 +171,9 @@ Mihomo Lite 是一个轻量的 Windows 图形客户端，负责启动 Mihomo 内
   失效本地代理端口
 - 代理页顶部代理组标签 + 节点列表，单击即切换；支持一键测试全部节点延迟、按延迟排序，
   以及跨重启保留的“上一个节点”快捷切换
-- 配置页使用玻璃卡片展示多个订阅（当前使用/已选中标识、紧凑详情），最小化到托盘时给出提示
+- 配置页使用玻璃卡片展示多个订阅（当前使用/已选中标识、紧凑详情），规则检查在后台执行
+  并按配置更新缓存，最小化到托盘时给出提示
+- 全部节点测延迟时列表刷新合批，多线程下载按节点复用 HTTP 连接，减少不必要的重建与握手
 - 首页显示当前节点、延迟与波动、本次用量、内网 IP、公网 IP 动态监测，以及 Rule/Global/Direct 出站切换
 - 延迟波动图（最近 60 个采样、均值与抖动）
 - 流量页：实时速度、本次与今日总量、最近 2 分钟滚动曲线
@@ -213,7 +218,7 @@ py -3.12 -m venv .venv
 pip install -e ".[dev]"
 
 python -m mihomo_lite          # 运行
-pytest                         # 239 个测试
+pytest                         # 242 个测试
 ruff check src tests           # 代码检查
 ```
 

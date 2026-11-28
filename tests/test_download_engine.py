@@ -70,7 +70,11 @@ class FakeTransport:
         self.status_ports: dict[int, int] = {}
         self.on_chunk = None
         self.barrier: threading.Barrier | None = None
+        self.closed = False
         self._lock = threading.Lock()
+
+    def close(self) -> None:
+        self.closed = True
 
     def head(self, url: str, proxy_port: int) -> HeadInfo:
         self.head_calls.append(proxy_port)
@@ -169,6 +173,17 @@ def test_single_thread_writes_file(tmp_path):
     assert result.downloaded == len(data)
     assert target.read_bytes() == data
     assert not default_state_path(target).exists()
+
+
+def test_engine_closes_the_transport(tmp_path):
+    data = payload(120_000)
+    transport = FakeTransport(data)
+    engine = make_engine(transport)
+
+    result = engine.run(options_for(tmp_path, data))
+
+    assert result.ok
+    assert transport.closed is True
 
 
 def test_head_no_accept_ranges_falls_back_single_thread(tmp_path):
